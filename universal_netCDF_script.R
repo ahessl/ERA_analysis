@@ -1,5 +1,4 @@
-rm(list=ls())
-#setwd("C:/Users/S/Desktop/NetCDFRPlay/ERA")
+
 ## The only potential things that should need changed for use with other netCDF files
 ## 1. Tree ring data file (Line 16)
 ## 2. Beginning and ending years for tree ring data (Line 19, numbers)
@@ -8,16 +7,11 @@ rm(list=ls())
 ## 5. Line 127-128, naming/order of the raster brick layers; currently for southern hemisphere
 ## 6. Color ramp (Line 136)
 ## 7. Coastline file, although if packaged with this file it shouldn't need changed.
+rm(list=ls())
+#setwd("C:/Users/S/Desktop/NetCDFRPlay/ERA")
 
 library(ncdf4)
 library(raster)
-
-##Tree ring data
-trDat <- read.table("../KBP_South/KBPS_cull_gap.rwl_tabs.txt", header = TRUE)
-
-#Decide start year and end year. Crop data to it
-trDat <-trDat[which(trDat$year >= 1979 & trDat$year<= 2011),]
-rownames(trDat) <- trDat$year
 
 #Bring in mean sea level pressure data
 #This file has two variables slp and msl. If only one variable, varname isn't required.
@@ -32,13 +26,24 @@ ext <- extent(60, 200.25, -80.25, -4.50)
 #Spatial crop using extent
 datC <- crop(dat, ext)
 
+##Tree ring data
+trDat <- read.table("../KBP_South/KBPS_cull_gap.rwl_tabs.txt", header = TRUE)
+
+#Decide start year and end year based on target and tree ring data
+F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
+L_yr <- as.numeric(max(trDat$year))
+
+#Crop data to it
+trDat <-trDat[which(trDat$year >= F_yr-1 & trDat$year<= L_yr),]
+rownames(trDat) <- trDat$year
+
 # Subset rasters based on the tree ring data. Won't exclude partial seasons.
 # second subset for that.
 # substr(names(dat)....) reads raster name and selects the characters (2 through 5) 
 # in the names (time in this case) to extract years and compares to values in tree ring file
-datC <- datC[[which(as.numeric(substr(names(dat), 2, 5)) >= trDat$year[1] & 
-                     as.numeric(substr(names(dat), 2, 5)) <= trDat$year[nrow(trDat)])]]
-datC <- datC[[-c(1:2, nlayers(datC))]] #subsets based on years in tree ring data file
+datC <- datC[[which(as.numeric(substr(names(dat), 2, 5)) >= F_yr & 
+                     as.numeric(substr(names(dat), 2, 5)) <= L_yr)]]
+datC <- datC[[-c(1:2, nlayers(datC))]] #removes first incomplete season JF
 
 ##set up identifier for seasons to use when doing raster math
 #starts <- rep(seq(1,nlayers(datC)/3, 1), each=3) #3 months for every season
@@ -106,17 +111,25 @@ treeCorr <- function(x, y){
 ## Doesn't work quite right yet because of the December issue on lines 49/50
 ##AH: ABOVE, I AM ASSIGNING SON, DJF, MAM, JJA OF CLIMATE DATA TO THE YEAR OF S-D
 ##AH: TREE RING YEAR ASSIGNED TO S-D CALENDAR YEAR, GORWING SEASON STARTS IN SEP
-##AH: SO ALL SEASONS ARE MISSING 2011, EXCEPT FOR SON
 ##AH: BUT SEEING AS I AM CALENDRICALLY CHALLENGED, I MIGHT SHOULD LET SC
-##AH: MANAGE THIS.
-DJF_c <- treeCorr(DJF, trDat$ars[-c(nrow(trDat))]) ####dropping last yr of trDat
-MAM_c <- treeCorr(MAM, trDat$ars) ####since climate data is shifted already t
-JJA_c <- treeCorr(JJA, trDat$ars) ####since climate data is shifted already t 
-SON_c <- treeCorr(SON, trDat$ars) ####since climate data is shifted already t
+##AH: MANAGE THIS. A loop.
+DJF_r <- range(as.numeric(substr(grep("DJF", names(datM), value=T),2, 5)))
+DJF_t <-trDat[which(trDat$year >= DJF_r[1] & trDat$year<= DJF_r[2]),]
+DJF_c <- treeCorr(DJF, DJF_t$ars) 
 
+MAM_r <- range(as.numeric(substr(grep("MAM", names(datM), value=T),2, 5)))
+MAM_t <-trDat[which(trDat$year >= MAM_r[1] & trDat$year<= MAM_r[2]),]
+MAM_c <- treeCorr(MAM, MAM_t$ars) 
 
+JJA_r <- range(as.numeric(substr(grep("JJA", names(datM), value=T),2, 5)))
+JJA_t <-trDat[which(trDat$year >= JJA_r[1] & trDat$year<= JJA_r[2]),]
+JJA_c <- treeCorr(JJA, JJA_t$ars) 
 
-rm(SON, DJF, JJA, MAM, trDat, datM, i) 
+SON_r <- range(as.numeric(substr(grep("SON", names(datM), value=T),2, 5)))
+SON_t <-trDat[which(trDat$year >= SON_r[1] & trDat$year<= SON_r[2]),]
+SON_c <- treeCorr(SON, SON_t$ars) 
+
+rm(SON, SON_t, DJF, DJF_t, JJA, JJA_t, MAM, MAM_t, trDat, datM) 
 
 #Stack the new rasters to be displayed.
 Seasons <- stack(DJF_c[[1]], MAM_c[[1]], JJA_c[[1]], SON_c[[1]])
