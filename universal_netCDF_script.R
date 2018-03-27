@@ -26,42 +26,40 @@ ext <- extent(60, 200.25, -80.25, -4.50)
 #Spatial crop using extent
 datC <- crop(dat, ext)
 
-##Tree ring data
+## Tree ring data
 trDat <- read.table("../KBP_South/KBPS_cull_gap.rwl_tabs.txt", header = TRUE)
 
-#Decide start year and end year based on target and tree ring data
+## Decide start year and end year based on target and tree ring data
 F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
 L_yr <- as.numeric(max(trDat$year))
 
 #Crop data to it
 trDat <-trDat[which(trDat$year >= F_yr-1 & trDat$year<= L_yr),]
-rownames(trDat) <- trDat$year
 
 # Subset rasters based on the tree ring data. Won't exclude partial seasons.
 # second subset for that.
 # substr(names(dat)....) reads raster name and selects the characters (2 through 5) 
 # in the names (time in this case) to extract years and compares to values in tree ring file
 datC <- datC[[which(as.numeric(substr(names(dat), 2, 5)) >= F_yr & 
-                     as.numeric(substr(names(dat), 2, 5)) <= L_yr)]]
-datC <- datC[[-c(1:2, nlayers(datC))]] #removes first incomplete season JF
+                      as.numeric(substr(names(dat), 2, 5)) <= L_yr)]]
+datC <- datC[[-c(1:2, (nlayers(datC)-3):nlayers(datC))]] #removes first incomplete season JF and last SON from year
 
-##set up identifier for seasons to use when doing raster math
-#starts <- rep(seq(1,nlayers(datC)/3, 1), each=3) #3 months for every season
-#AMY's alternative to STARTS
+#AMY's alternative to STARTS is much better!
 library(chron)
-## SC: This doesn't work, and I'm not sure how to fix yet. December is problematic. Working on it.....
 
 yr_mo_dy <- substr(names(datC), 2, 11)
 d <- as.Date(gsub(".", '/', yr_mo_dy, fixed = T)) #fix the format by replacing "." with "/"
 ##AH: changed $year==12 to $mon<8 (POSIXlt indexes months from 0
 ##AH: and growing season starts in SEP) 
 ##AH: can SC confirm that it works?
+##SC: It works!
+
 yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering 
-         as.POSIXlt( d )$year - 
-         1*(as.POSIXlt( d )$mon<8) ,   # offset needed for grwoing season in SH
-       c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
-         1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
-       , sep="-")
+                      as.POSIXlt( d )$year - 
+                      1*(as.POSIXlt( d )$mon<8) ,   # offset needed for grwoing season in SH
+                    c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
+                      1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
+                    , sep="-")
 
 ##remove unnecessary files
 rm(yr_mo_dy, d)
@@ -69,19 +67,20 @@ rm(yr_mo_dy, d)
 # ##Get Mean of seasonal sea level pressure using seasons
 datM <- stackApply(datC, yr_season, mean) #raster with mean for each season
 names(datM) <- unique(yr_season) #Is this more efficient since it doesn't have to call on itself?
-  
+
 # If data is not continuous you must
 # replace all NA with a number outside of the bounds of data in order to do correlations.
 # For temperature, 0 will not work since values do go to 0 or below. 
 # Done at this stage because data can be too large.
 # Also subsets seasons at same time
-SON <- values(subset(datM, grep("SON", names(datM), value=T)))
+
+for (i in unique(substring(yr_season, 6))){
+  assign(paste0(i), values(subset(datM, grep(i, names(datM), value=T))))
+}
+
 SON[is.na(SON[])] <- -10
-DJF <- values(subset(datM, grep("DJF", names(datM), value=T)))
 DJF[is.na(DJF[])] <- -10
-JJA <- values(subset(datM, grep("JJA", names(datM), value=T)))
 JJA[is.na(JJA[])] <- -10
-MAM <- values(subset(datM, grep("MAM", names(datM), value=T)))
 MAM[is.na(MAM[])] <- -10
 
 #create rasters to ingest the spatial correlations
@@ -89,57 +88,70 @@ CorT <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
 Cor <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
 temp <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
 
-## create correlation based on tree ring indices
-## Create raster of p values used to create the cropped confidence intervals
 
 ## Presenting the treeCorr Function!!!
 ## This compresses multitudes of previous coding into a very small package
 ## Correlation, masking all done in one go. Plot ready after this.
-treeCorr <- function(x, y){
+
+#treeCorr <- function(x, y){
+#  for(i in 1:dim(x)[1]){
+#      Cor[i] <- cor(x=x[i,], y = y, method = 'pearson') ## create correlation based on tree ring indices
+#      CorT[i] <- cor.test(x=x[i,], y = y, method = 'pearson')$p.value ## p values used to create the cropped confidence intervals
+#  }
+#  CorT[CorT > 0.05] <- NA
+#  Cor <- brick(Cor)
+#  temp <- mask(Cor, CorT)
+#  return(temp)
+#}
+
+## SC: Made another function that compacts everything. Attempts to do so in the first function failed.
+## SC: It's not as fast as the previous, but it requires a lot less attention.
+
+#finalCorr <- function(x, y){# x is climate matrix (e.g. DJF), y is column from trDat for correlation in quotes
+#  rng <- range(as.numeric(substr(grep(
+#    unique(substr(as.character(colnames(x)), 7, 9)), 
+#    colnames(x), value=T),2, 5)))
+#  trYr <-trDat[which(trDat$year >= rng[1] & trDat$year<= rng[2]),]
+#  treeCorr(x,trYr[,y])
+#}
+#DJF_c <- finalCorr(DJF, "mr_kbp")
+#MAM_c <- finalCorr(MAM, "mr_kbp")
+#JJA_c <- finalCorr(JJA, "mr_kbp")
+#SON_c <- finalCorr(SON, "mr_kbp")
+
+
+## SC: I don't know which way to run is better. The following is the combination of previous functions.
+fullCorr <- function(x, y){
+  rng <- range(as.numeric(substr(grep(
+    unique(substr(as.character(colnames(x)), 7, 9)), 
+    colnames(x), value=T),2, 5)))
+  trYr <-trDat[which(trDat$year >= rng[1] & trDat$year<= rng[2]),]
   for(i in 1:dim(x)[1]){
-      Cor[i] <- cor(x=x[i,], y = y, method = 'pearson') 
-      CorT[i] <- cor.test(x=x[i,], y = y, method = 'pearson')$p.value
+    Cor[i] <- cor(x=x[i,], y = trYr[,y], method = 'pearson') ## create correlation based on tree ring
+    CorT[i] <- cor.test(x=x[i,], y = trYr[,y], method = 'pearson')$p.value ## p values used to create the cropped confidence intervals
   }
   CorT[CorT > 0.05] <- NA
   Cor <- brick(Cor)
   temp <- mask(Cor, CorT)
   return(temp)
-   
 }
 
-## Simplified creating rasters. This isn't completed yet. Making it universal for HP is going to take more work since it's shorter
-## Doesn't work quite right yet because of the December issue on lines 49/50
-##AH: ABOVE, I AM ASSIGNING SON, DJF, MAM, JJA OF CLIMATE DATA TO THE YEAR OF S-D
-##AH: TREE RING YEAR ASSIGNED TO S-D CALENDAR YEAR, GORWING SEASON STARTS IN SEP
-##AH: BUT SEEING AS I AM CALENDRICALLY CHALLENGED, I MIGHT SHOULD LET SC
-##AH: MANAGE THIS. A loop.
-DJF_r <- range(as.numeric(substr(grep("DJF", names(datM), value=T),2, 5)))
-DJF_t <-trDat[which(trDat$year >= DJF_r[1] & trDat$year<= DJF_r[2]),]
-DJF_c <- treeCorr(DJF, DJF_t$ars) 
+DJF_c <- fullCorr(DJF, "mr_kbp")
+MAM_c <- fullCorr(MAM, "mr_kbp")
+JJA_c <- fullCorr(JJA, "mr_kbp")
+SON_c <- fullCorr(SON, "mr_kbp")
 
-MAM_r <- range(as.numeric(substr(grep("MAM", names(datM), value=T),2, 5)))
-MAM_t <-trDat[which(trDat$year >= MAM_r[1] & trDat$year<= MAM_r[2]),]
-MAM_c <- treeCorr(MAM, MAM_t$ars) 
-
-JJA_r <- range(as.numeric(substr(grep("JJA", names(datM), value=T),2, 5)))
-JJA_t <-trDat[which(trDat$year >= JJA_r[1] & trDat$year<= JJA_r[2]),]
-JJA_c <- treeCorr(JJA, JJA_t$ars) 
-
-SON_r <- range(as.numeric(substr(grep("SON", names(datM), value=T),2, 5)))
-SON_t <-trDat[which(trDat$year >= SON_r[1] & trDat$year<= SON_r[2]),]
-SON_c <- treeCorr(SON, SON_t$ars) 
-
-rm(SON, SON_t, DJF, DJF_t, JJA, JJA_t, MAM, MAM_t, trDat, datM) 
+rm(SON, DJF, JJA, MAM, trDat, datM) 
 
 #Stack the new rasters to be displayed.
 Seasons <- stack(DJF_c[[1]], MAM_c[[1]], JJA_c[[1]], SON_c[[1]])
 names(Seasons) <- c("DJF", "MAM", "JJA", "SON")
-rm(Cor, CorT)
 
+rm(Cor, CorT, temp)
 #Load in a shapefile and crop for the region of interest 
 library(rgdal)
 library(rgeos)
-coast_shapefile <- crop(readOGR("GISdata/ne_10m_coastline.shp"), ext)
+coast_shapefile <- crop(readOGR("C:/Users/S/Desktop/NetCDFRPlay/ERA/ne_10m_coastline.shp"), ext)
 
 #Create color ramps for mapping and number of colors to use
 library(colorRamps)
