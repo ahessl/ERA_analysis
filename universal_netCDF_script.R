@@ -15,13 +15,14 @@ library(raster)
 
 #Bring in mean sea level pressure data
 #This file has two variables slp and msl. If only one variable, varname isn't required.
-dat <- brick("ERA_Download/era_interim_moda_SLP.nc")#, varname = "slp")
+dat <- brick("Reanal20thc/pres.sfc.mon.mean.nc")#, varname = "tmp")
 
 ## set spatial extent for area interested in. Longitude min - max then latitude min - max
 ## Creating this way allows for other created rasters to recognize as an extent with 
 ## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
 
-ext <- extent(60, 200.25, -80.25, -4.50)
+#ext <- extent(60, 180, -80, -4)
+ext <- extent(-180, 180, -80, 0)
 
 #Spatial crop using extent
 datC <- crop(dat, ext)
@@ -30,8 +31,11 @@ datC <- crop(dat, ext)
 trDat <- read.table("../KBP_South/KBPS_cull_gap.rwl_tabs.txt", header = TRUE)
 
 ## Decide start year and end year based on target and tree ring data
-F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
-L_yr <- as.numeric(max(trDat$year))
+#F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
+F_yr <- 1979
+L_yr <- 1998
+#L_yr <- as.numeric(max(trDat$year))
+
 
 #Crop data to it
 trDat <-trDat[which(trDat$year >= F_yr-1 & trDat$year<= L_yr),]
@@ -44,19 +48,16 @@ datC <- datC[[which(as.numeric(substr(names(dat), 2, 5)) >= F_yr &
                       as.numeric(substr(names(dat), 2, 5)) <= L_yr)]]
 datC <- datC[[-c(1:2, (nlayers(datC)-3):nlayers(datC))]] #removes first incomplete season JF and last SON from year
 
-#AMY's alternative to STARTS is much better!
 library(chron)
 
 yr_mo_dy <- substr(names(datC), 2, 11)
 d <- as.Date(gsub(".", '/', yr_mo_dy, fixed = T)) #fix the format by replacing "." with "/"
 ##AH: changed $year==12 to $mon<8 (POSIXlt indexes months from 0
 ##AH: and growing season starts in SEP) 
-##AH: can SC confirm that it works?
-##SC: It works!
 
 yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering 
                       as.POSIXlt( d )$year - 
-                      1*(as.POSIXlt( d )$mon<8) ,   # offset needed for grwoing season in SH
+                      1*(as.POSIXlt( d )$mon<8) ,   # offset needed for growing season in SH
                     c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
                       1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
                     , sep="-")
@@ -73,15 +74,33 @@ names(datM) <- unique(yr_season) #Is this more efficient since it doesn't have t
 # For temperature, 0 will not work since values do go to 0 or below. 
 # Done at this stage because data can be too large.
 # Also subsets seasons at same time
+# AH: PRETTY!
 
 for (i in unique(substring(yr_season, 6))){
   assign(paste0(i), values(subset(datM, grep(i, names(datM), value=T))))
-}
+  }
 
 SON[is.na(SON[])] <- -10
 DJF[is.na(DJF[])] <- -10
 JJA[is.na(JJA[])] <- -10
 MAM[is.na(MAM[])] <- -10
+
+#AH tries to remove trend from each cell in raster
+#Need a sequence of years the right length for each season
+#Need to iterate over each seasonal matrix
+#could be rolled into your loop above, when it works!
+#for DJF
+lm_x <- seq(1:dim(DJF)[2]) #regress over time, exact years not important
+DJF_r <- t(resid(lm(t(DJF)~ lm_x)))
+
+#amy tries a loop and fails!
+for (i in unique(substring(yr_season, 6))){
+  lm_x <- seq(1:dim(get(i))[2])
+  r <- t(resid(lm(t(get(i)) ~ lm_x))) #something is stuffing up here,got it working on DJF alone
+  assign(paste0(i), r) #and maybe here with the names vs matrices
+  rm(r)
+}
+###
 
 #create rasters to ingest the spatial correlations
 CorT <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
@@ -93,34 +112,7 @@ temp <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
 ## This compresses multitudes of previous coding into a very small package
 ## Correlation, masking all done in one go. Plot ready after this.
 
-#treeCorr <- function(x, y){
-#  for(i in 1:dim(x)[1]){
-#      Cor[i] <- cor(x=x[i,], y = y, method = 'pearson') ## create correlation based on tree ring indices
-#      CorT[i] <- cor.test(x=x[i,], y = y, method = 'pearson')$p.value ## p values used to create the cropped confidence intervals
-#  }
-#  CorT[CorT > 0.05] <- NA
-#  Cor <- brick(Cor)
-#  temp <- mask(Cor, CorT)
-#  return(temp)
-#}
-
-## SC: Made another function that compacts everything. Attempts to do so in the first function failed.
-## SC: It's not as fast as the previous, but it requires a lot less attention.
-
-#finalCorr <- function(x, y){# x is climate matrix (e.g. DJF), y is column from trDat for correlation in quotes
-#  rng <- range(as.numeric(substr(grep(
-#    unique(substr(as.character(colnames(x)), 7, 9)), 
-#    colnames(x), value=T),2, 5)))
-#  trYr <-trDat[which(trDat$year >= rng[1] & trDat$year<= rng[2]),]
-#  treeCorr(x,trYr[,y])
-#}
-#DJF_c <- finalCorr(DJF, "mr_kbp")
-#MAM_c <- finalCorr(MAM, "mr_kbp")
-#JJA_c <- finalCorr(JJA, "mr_kbp")
-#SON_c <- finalCorr(SON, "mr_kbp")
-
-
-## SC: I don't know which way to run is better. The following is the combination of previous functions.
+## SC: The following is the combination of previous functions.
 fullCorr <- function(x, y){
   rng <- range(as.numeric(substr(grep(
     unique(substr(as.character(colnames(x)), 7, 9)), 
@@ -136,10 +128,10 @@ fullCorr <- function(x, y){
   return(temp)
 }
 
-DJF_c <- fullCorr(DJF, "mr_kbp")
-MAM_c <- fullCorr(MAM, "mr_kbp")
-JJA_c <- fullCorr(JJA, "mr_kbp")
-SON_c <- fullCorr(SON, "mr_kbp")
+DJF_c <- fullCorr(DJF, "ars")
+MAM_c <- fullCorr(MAM, "ars")
+JJA_c <- fullCorr(JJA, "ars")
+SON_c <- fullCorr(SON, "ars")
 
 rm(SON, DJF, JJA, MAM, trDat, datM) 
 
@@ -151,7 +143,7 @@ rm(Cor, CorT, temp)
 #Load in a shapefile and crop for the region of interest 
 library(rgdal)
 library(rgeos)
-coast_shapefile <- crop(readOGR("C:/Users/S/Desktop/NetCDFRPlay/ERA/ne_10m_coastline.shp"), ext)
+coast_shapefile <- crop(readOGR("GISdata/ne_10m_coastline.shp"), ext)
 
 #Create color ramps for mapping and number of colors to use
 library(colorRamps)
@@ -167,7 +159,8 @@ library(gridExtra)
 #colorkey is information about the legend, wanted bottom so have to give it the space
 #par.settings is various graphical settings outside of plots
 # +layer(...) adds the coastlines onto the map
-levelplot(Seasons, layout=c(2,2), col.regions = col5, pretty=TRUE, main="Pearson R w/SSP 1979 - 2011",
+levelplot(Seasons, layout=c(2,2), col.regions = col5, pretty=TRUE, 
+          main= paste("Pearson R Reanal SFCP", F_yr, "-", L_yr),
           colorkey=list(space="bottom"),
           par.settings = list(layout.heights=list(xlab.key.padding=1),
                               strip.background=list(col="lightgrey")
