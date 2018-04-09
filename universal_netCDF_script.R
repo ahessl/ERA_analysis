@@ -80,8 +80,9 @@ for (i in unique(substring(yr_season, 6))){
   d <- values(subset(datM, grep(i, names(datM), value=T)))
   d[is.na(d[])] <- -9999
   assign(paste0(i), d)
-  lm_x <- seq(1:dim(get(i))[2])
-  r <- t(resid(lm(t(get(i)) ~ lm_x))) 
+  #Replace with first differencing using diff()
+  #lm_x <- seq(1:dim(get(i))[2])
+  #r <- t(resid(lm(t(get(i)) ~ lm_x))) 
   assign(paste0(i), r)
   rm(r, d, lm_x)
   }
