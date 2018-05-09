@@ -17,7 +17,7 @@ library(raster)
 # put the variable name abbreviation in "" to load it.
 
 #dat <- brick("Reanal20thc/pres.sfc.mon.mean.nc")#, varname = "tmp") Amy's Data
-dat <- brick("../ERA_Download/era_interim_moda_SLP.nc", varname= 'tcc')
+dat <- brick("../ERA_Download/era_interim_moda_All.nc", varname= 'msl')
 
 ## set spatial extent for area interested in. Longitude min - max then latitude min - max
 ## Creating this way allows for other created rasters to recognize as an extent with 
@@ -34,10 +34,10 @@ trDat <- read.csv("chronos.csv", header = TRUE)
 
 
 ## Decide start year and end year based on target and tree ring data
-#F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
-F_yr <- 1979
-L_yr <- 1998
-#L_yr <- as.numeric(max(trDat$year))
+F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
+#F_yr <- 1979
+#L_yr <- 1998
+L_yr <- as.numeric(max(trDat$year))
 
 
 #Crop data to it
@@ -58,12 +58,21 @@ d <- as.Date(gsub(".", '/', yr_mo_dy, fixed = T)) #fix the format by replacing "
 ##AH: changed $year==12 to $mon<8 (POSIXlt indexes months from 0
 ##AH: and growing season starts in SEP) 
 
+### Current Growing Year (as determined by tree dates)
 yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering 
                       as.POSIXlt( d )$year - 
                       1*(as.POSIXlt( d )$mon<8) ,   # offset needed for growing season in SH
                     c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
                       1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
                     , sep="-")
+
+### One Year Climate Lag (e.g. tree year 1980 will be associated with climate data for tree year 1979)
+#yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering 
+#                      as.POSIXlt( d )$year + 
+#                      1*(as.POSIXlt( d )$mon>7) ,   # offset needed for lagged season in SH
+#                    c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
+#                      1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
+#                    , sep="-")
 
 ##remove unnecessary files
 rm(yr_mo_dy, d)
@@ -72,19 +81,24 @@ rm(yr_mo_dy, d)
 datM <- stackApply(datC, yr_season, mean) #raster with mean for each season
 names(datM) <- unique(yr_season) #Is this more efficient since it doesn't have to call on itself?
 
-# Subset season, replace NAs with -9999 for correlation/regression, run linear model extracting residuals.
-# AH: PRETTY!
-# SC: Putting it together - works for spatially complete and incomplete....for me.
+# Subset season, replace NAs with -9999 for correlation/regression.
+# Can run linear model extracting residuals or first differences.
+
+# SC: First Differences added!
 
 for (i in unique(substring(yr_season, 6))){
   d <- values(subset(datM, grep(i, names(datM), value=T)))
   d[is.na(d[])] <- -9999
-  assign(paste0(i), d)
-  lm_x <- seq(1:dim(get(i))[2])
-  r <- t(resid(lm(t(get(i)) ~ lm_x))) 
+  #  assign(paste0(i), d)
+  ## First Differences Method
+  r <- t(diff(t(d), 1))
+  ## Linear Model Method  
+  #lm_x <- seq(1:dim(get(i))[2])
+  #r <- t(resid(lm(t(get(i)) ~ lm_x))) 
+  #rm(lm_x)
   assign(paste0(i), r)
-  rm(r, d, lm_x)
-  }
+  rm(r, d)
+}
 
 #create rasters to store the spatial correlations
 CorT <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
