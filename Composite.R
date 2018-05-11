@@ -65,23 +65,25 @@ datMs <- subset(datMs, c(3,4,1,2)) #reorder because they are setup as MAM, JJA, 
 #### Create seasonal mean of high years and low years (whatever that means for your purposes) ####
 
 ### This section uses climate extremes to extract specific years
-### created csv with columns STR w/ values h and l for high and low years; column year is the year it occurred
+### created c.comp.csv with columns STR w/ values h and l for high and low years; column year is the year it occurred
 ### combined high and low in one place
-c.cm <- read.csv("c.comp.csv")
-h.yr <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  c.cm$year[c.cm$STR == "h"] )]]
-l.yr <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  c.cm$year[c.cm$STR == "l"] )]]
+c.cm <- read.csv("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERA_Download/c.comp.csv")
 
-dat.h <- stackApply(h.yr, substring(names(h.yr), 7), mean)#seasonal mean for high years
-names(dat.h) <- unique(substring(names(h.yr), 7)) #meaningful names
+c.yr <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  c.cm$year[c.cm$STR == "h"] )]] #High value year
+#c.yr <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  c.cm$year[c.cm$STR == "l"] )]] #Low value year
 
-dat.l <- stackApply(l.yr, substring(names(l.yr), 7), mean) #seasonal mean for high years
-names(dat.l) <- unique(substring(names(l.yr), 7)) #meaningful names
+dat.c <- stackApply(c.yr, substring(names(c.yr), 7), mean)#seasonal mean for high years
+names(dat.c) <- unique(substring(names(c.yr), 7)) #meaningful names
+com.c <- dat.c - datMs #composite difference high years
 
-com.h <- dat.h - datMs #composite difference
-com.l <- dat.l - datMs #composite difference
+#dat.c <- stackApply(l.yr, substring(names(c.yr), 7), mean) #seasonal mean for low years
+#names(dat.c) <- unique(substring(names(c.yr), 7)) #meaningful names
+#com.c <- dat.c - datMs #composite difference low years
 
-rm(c.cm, h.yr, l.yr, dat.h, dat.l, datM, datC)
+
 #### Tree ring guiding the analysis....for whatever it's worth. ####
+
+## There has been very little work done to this. 
 
 ## Extract wide and narrow years from TR indices. h for high growth; l for low growth
 #tr.h <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  trDat$year[order(trDat$mr_kbp)[1:5]])]]
@@ -102,36 +104,86 @@ library(rgdal)
 library(rgeos)
 coast_shapefile <- crop(readOGR("../GISData/ne_10m_coastline.shp"), ext)
 
-#Create color ramps for mapping and number of colors to use
+# Create color ramps for mapping and number of colors to use
 library(colorRamps)
 col5 <- colorRampPalette(c('#08519c', 'lightblue3','gray96', "#fee0d2", "firebrick3"))
 
-#Load the lattice packages to display the maps
+# Load the lattice packages to display the maps
 library(rasterVis)
 library(gridExtra)
 
-
-#### Low value years ####
-levelplot(com.l, layout=c(2,2), col.regions = col5, pretty=TRUE, main="Narrow Composite Mean SLP Diff 1979 - 2011",
+# Make a plot!
+levelplot(com.c, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste("Sea Level Pressure Composite:", F_yr, "-", L_yr),
           colorkey=list(space="bottom"),
           par.settings = list(layout.heights=list(xlab.key.padding=1),
                               strip.background=list(col="lightgrey")
           ), par.strip.text = list(font="bold")) + 
   layer(sp.lines(coast_shapefile))
 
+#### Correlation with tree ring data ####
 
-#### High value years ####
-levelplot(com.h, layout=c(2,2), col.regions = col5, pretty=TRUE, main="Wide Composite Mean SLP Diff 1979 - 2011",
-          colorkey=list(space="bottom"),
-          par.settings = list(layout.heights=list(xlab.key.padding=1),
-                              strip.background=list(col="lightgrey")
-          ), par.strip.text = list(font="bold")) + 
-  layer(sp.lines(coast_shapefile))
+# Pull High Value Years from tree ring data using c.cm from before
+tr.yr <- trDat[which(trDat$year %in%  c.cm$year[c.cm$STR == "h"] ),]
 
-#### Low minus High ####
-com.lh <- com.l - com.h
 
-levelplot(com.lh, layout=c(2,2), col.regions = col5, pretty=TRUE, main="Narrow-Wide Composite Mean SLP Diff 1979 - 2011",
+# Low Value Years from tree ring data using c.cm from before
+#tr.yr <- trDat[which(trDat$year %in%  c.cm$year[c.cm$STR == "l"] ),]
+
+for (i in unique(substring(yr_season, 6))){
+  d <- values(subset(c.yr, grep(i, names(c.yr), value=T)))
+  d[is.na(d[])] <- -9999
+  r <- d
+  #  assign(paste0(i), d)
+  ## First Differences Method
+#  r <- t(diff(t(d), 1)) ## Don't use this right now. Have to figure out how to deal with it.
+  ## Linear Model Method  
+  #lm_x <- seq(1:dim(get(i))[2])
+  #r <- t(resid(lm(t(get(i)) ~ lm_x))) 
+  #rm(lm_x)
+  assign(paste0(i), r)
+  rm(r, d)
+}
+
+#create rasters to store the spatial correlations
+CorT <- setExtent(raster(nrow = nrow(c.yr), ncol = ncol(c.yr)),ext)
+Cor <- setExtent(raster(nrow = nrow(c.yr), ncol = ncol(c.yr)),ext)
+temp <- setExtent(raster(nrow = nrow(c.yr), ncol = ncol(c.yr)),ext)
+
+## Correlation, masking all done in one go. Plot ready after this.
+
+fullCorr <- function(x, y){ # x=climate data, y=column name from trDat in ""
+  trYr <-tr.yr
+  for(i in 1:dim(x)[1]){
+    Cor[i] <- cor(x=x[i,], y = trYr[,y], method = 'pearson') ## create correlation based on tree ring
+    CorT[i] <- cor.test(x=x[i,], y = trYr[,y], method = 'pearson')$p.value ## p values used to create the cropped confidence intervals
+  }
+  CorT[CorT > 0.05] <- NA
+  Cor <- brick(Cor)
+  temp <- mask(Cor, CorT)
+  return(temp)
+}
+
+DJF_c <- fullCorr(DJF, "mr_kbp")
+MAM_c <- fullCorr(MAM, "mr_kbp")
+JJA_c <- fullCorr(JJA, "mr_kbp")
+SON_c <- fullCorr(SON, "mr_kbp")
+
+rm(SON, DJF, JJA, MAM, trDat, datM) 
+
+#Stack the new rasters to be displayed.
+Seasons <- stack(SON_c[[1]], DJF_c[[1]], MAM_c[[1]], JJA_c[[1]])
+names(Seasons) <- c("SON", "DJF", "MAM", "JJA")
+
+rm(Cor, CorT, temp)
+
+#Plot correlation map using the color ramp and levels using lattice
+#Layout dictates how many plots in row, col format
+#col.region is the color ramp previously created, pretty makes the color breaks happen logically
+#colorkey is information about the legend, wanted bottom so have to give it the space
+#par.settings is various graphical settings outside of plots
+# +layer(...) adds the coastlines onto the map
+levelplot(Seasons, layout=c(2,2), col.regions = col5, pretty=TRUE, 
+          main= paste("Pearson R Reanal SFCP", F_yr, "-", L_yr),
           colorkey=list(space="bottom"),
           par.settings = list(layout.heights=list(xlab.key.padding=1),
                               strip.background=list(col="lightgrey")
