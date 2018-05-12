@@ -1,18 +1,27 @@
-setwd("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERA_Download")
+#setwd("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERA_Download")
 rm(list=ls())
 library(raster)
 library(ncdf4)
 
-# Get a list of the stupid variables to choose from......
-nc = nc_open('era_interim_moda_All.nc')
-var.name = names(nc[['var']])
+# Get a list of the stupid variables to choose from and confirm that the time 
+#origin and units are appropriate......
+nc <- nc_open('../ERA_Download/era_interim_moda_2mT.nc')
+
+#select the variable
+print(names(nc[['var']]))
+var.name <- names(nc[['var']])
+
+t <- ncvar_get(nc, "time")
+tunits <- ncatt_get(nc, "time", "units")
+print(tunits)
+
 nc_close(nc)
 
 
-dat <- brick("era_interim_moda_All.nc", varname=var.name[7])
-trDat <- read.csv("../ERAclimateExploration/chronos.csv", head=T)
+dat <- brick("../ERA_Download/era_interim_moda_2mT.nc", varname=var.name) #adjusted for selection above
+trDat <- read.table("../../KBP_South/KBPS_cull_gap.rwl_tabs.txt", header = TRUE)
 
-## Decide start year and end year based on target and tree ring data
+## Select start year and end year based on target and tree ring data
 F_yr <- min(as.numeric(substr(names(dat), 2, 5)))
 L_yr <- as.numeric(max(trDat$year))
 
@@ -67,14 +76,14 @@ datMs <- subset(datMs, c(3,4,1,2)) #reorder because they are setup as MAM, JJA, 
 ### This section uses climate extremes to extract specific years
 ### created c.comp.csv with columns STR w/ values h and l for high and low years; column year is the year it occurred
 ### combined high and low in one place
-c.cm <- read.csv("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERA_Download/c.comp.csv")
-
-c.yr <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  c.cm$year[c.cm$STR == "h"] )]] #High value year
-#c.yr <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  c.cm$year[c.cm$STR == "l"] )]] #Low value year
-
-dat.c <- stackApply(c.yr, substring(names(c.yr), 7), mean)#seasonal mean for high years
-names(dat.c) <- unique(substring(names(c.yr), 7)) #meaningful names
-com.c <- dat.c - datMs #composite difference high years
+# c.cm <- read.csv("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERA_Download/c.comp.csv")
+# 
+# c.yr <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  c.cm$year[c.cm$STR == "h"] )]] #High value year
+# #c.yr <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  c.cm$year[c.cm$STR == "l"] )]] #Low value year
+# 
+# dat.c <- stackApply(c.yr, substring(names(c.yr), 7), mean)#seasonal mean for high years
+# names(dat.c) <- unique(substring(names(c.yr), 7)) #meaningful names
+# com.c <- dat.c - datMs #composite difference high years
 
 #dat.c <- stackApply(l.yr, substring(names(c.yr), 7), mean) #seasonal mean for low years
 #names(dat.c) <- unique(substring(names(c.yr), 7)) #meaningful names
@@ -84,19 +93,26 @@ com.c <- dat.c - datMs #composite difference high years
 #### Tree ring guiding the analysis....for whatever it's worth. ####
 
 ## There has been very little work done to this. 
+#Better to select based on quantiles:
+## Smallest x% years, Largest x% years
+quants <- quantile(trDat$ars, probs = c(0.10, 0.90))
+lq_yrs <- trDat$year[which(trDat$ars<quants[1])]
+uq_yrs <- trDat$year[which(trDat$ars>quants[2])]
 
 ## Extract wide and narrow years from TR indices. h for high growth; l for low growth
 #tr.h <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  trDat$year[order(trDat$mr_kbp)[1:5]])]]
 #tr.l <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  trDat$year[order(trDat$mr_kbp, decreasing = T)[1:5]])]]
+tr.h <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in% uq_yrs) ]]
+tr.l <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in% lq_yrs) ]]
 
-#dat.h <- stackApply(tr.h, substring(names(tr.h), 7), mean) #seasonal mean for wide years
-#names(dat.w) <- unique(substring(names(tr.h), 7)) #meaningful names
+dat.h <- stackApply(tr.h, substring(names(tr.h), 7), mean) #seasonal mean for wide years
+names(dat.h) <- unique(substring(names(tr.h), 7)) #meaningful names
 
-#dat.l <- stackApply(tr.l, substring(names(tr.l), 7), mean)
-#names(dat.n) <- unique(substring(names(tr.l), 7))
+dat.l <- stackApply(tr.l, substring(names(tr.l), 7), mean)
+names(dat.l) <- unique(substring(names(tr.l), 7))
 
-#com.h <- dat.h - datMs #composite difference
-#com.l <- dat.l - datMs #composite difference
+com.h <- dat.h - datMs #composite difference
+com.l <- dat.l - datMs #composite difference
 
 ########### Plotting the composites ###########
 
@@ -113,8 +129,8 @@ library(rasterVis)
 library(gridExtra)
 
 # Make a plot!
-levelplot(com.c, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste("Sea Level Pressure Composite:", F_yr, "-", L_yr),
-          colorkey=list(space="bottom"),
+levelplot(com.h, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste("Sea Level Pressure Composite:", F_yr, "-", L_yr),
+          colorkey=list(space="right"),
           par.settings = list(layout.heights=list(xlab.key.padding=1),
                               strip.background=list(col="lightgrey")
           ), par.strip.text = list(font="bold")) + 
