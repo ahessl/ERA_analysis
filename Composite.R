@@ -3,13 +3,16 @@ rm(list=ls())
 library(raster)
 library(ncdf4)
 
+netcdf.file <- "../NOAA20thc/air.sfc.mon.mean.nc"
+treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
+
 # Get a list of the stupid variables to choose from and confirm that the time 
 #origin and units are appropriate......
-nc <- nc_open('../ERA_Download/era_interim_moda_2mT.nc')
+nc <- nc_open(netcdf.file)
 
 #select the variable
 print(names(nc[['var']]))
-var.name <- names(nc[['var']])
+var.name <- names(nc[['var']])[2]
 
 t <- ncvar_get(nc, "time")
 tunits <- ncatt_get(nc, "time", "units")
@@ -18,8 +21,8 @@ print(tunits)
 nc_close(nc)
 
 
-dat <- brick("../ERA_Download/era_interim_moda_2mT.nc", varname=var.name) #adjusted for selection above
-trDat <- read.table("../../KBP_South/KBPS_cull_gap.rwl_tabs.txt", header = TRUE)
+dat <- brick(netcdf.file, varname=var.name) #adjusted for selection above
+trDat <- read.table(treering.file, header = TRUE)
 
 ## Select start year and end year based on target and tree ring data
 F_yr <- min(as.numeric(substr(names(dat), 2, 5)))
@@ -36,6 +39,8 @@ ext <- extent(60, 200.25, -80.25, -4.50)
 
 #Spatial crop using extent
 datC <- crop(dat, ext)
+
+#Temporal limits using fyr, lyr
 datC <- datC[[which(as.numeric(substr(names(datC), 2, 5)) >= F_yr & 
                       as.numeric(substr(names(datC), 2, 5)) <= L_yr)]]
 datC <- datC[[-c(1:2, (nlayers(datC)-3):nlayers(datC))]] #removes first incomplete season JF and last SON from year
@@ -128,8 +133,11 @@ col5 <- colorRampPalette(c('#08519c', 'lightblue3','gray96', "#fee0d2", "firebri
 library(rasterVis)
 library(gridExtra)
 
+title.txt <- basename(netcdf.file) #b/c I am losing track of what's what;
+#add wide or narrow!
+             
 # Make a plot!
-levelplot(com.h, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste("Sea Level Pressure Composite:", F_yr, "-", L_yr),
+levelplot(com.l, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste(title.txt, F_yr, "-", L_yr),
           colorkey=list(space="right"),
           par.settings = list(layout.heights=list(xlab.key.padding=1),
                               strip.background=list(col="lightgrey")
