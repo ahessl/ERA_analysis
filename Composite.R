@@ -3,7 +3,7 @@ rm(list=ls())
 library(raster)
 library(ncdf4)
 
-netcdf.file <- "../NOAA20thc/air.sfc.mon.mean.nc"
+netcdf.file <- "../NOAA20thc/hgt500.nc"
 treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
 # Get a list of the stupid variables to choose from and confirm that the time 
@@ -12,7 +12,7 @@ nc <- nc_open(netcdf.file)
 
 #select the variable
 print(names(nc[['var']]))
-var.name <- names(nc[['var']])[2]
+var.name <- names(nc[['var']])[1]
 
 t <- ncvar_get(nc, "time")
 tunits <- ncatt_get(nc, "time", "units")
@@ -25,7 +25,7 @@ dat <- brick(netcdf.file, varname=var.name) #adjusted for selection above
 trDat <- read.table(treering.file, header = TRUE)
 
 ## Select start year and end year based on target and tree ring data
-F_yr <- min(as.numeric(substr(names(dat), 2, 5)))
+F_yr <- 1959#min(as.numeric(substr(names(dat), 2, 5)))
 L_yr <- as.numeric(max(trDat$year))
 
 #Crop data to it
@@ -63,8 +63,10 @@ yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering
                     , sep="-")
 
 ## Get yearly seasonal means
-datM <- stackApply(datC, yr_season, mean) #raster with mean for each season
+datM <- stackApply(datC, yr_season, mean) 
 names(datM) <- unique(yr_season)
+
+##Need to detrend data####
 
 ########### Creating Composite ############
 
