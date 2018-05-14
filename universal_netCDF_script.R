@@ -7,17 +7,34 @@
 ## 6. Color ramp (col5)
 ## 7. Coastline file, although if packaged with this file it shouldn't need changed.
 rm(list=ls())
-setwd("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERAclimateExploration")
+#setwd("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERAclimateExploration")
 
 library(ncdf4)
 library(raster)
+
+#Name the files for convenience:
+netcdf.file <- "../NOAA20thc/hgt500.nc"
+treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
 # If the netcdf file has one layer, varname isn't required. 
 # If it has more than one, the first will be loaded and give names for all. Use varname="" and 
 # put the variable name abbreviation in "" to load it.
 
-#dat <- brick("Reanal20thc/pres.sfc.mon.mean.nc")#, varname = "tmp") Amy's Data
-dat <- brick("../ERA_Download/era_interim_moda_All.nc", varname= 'msl')
+# Get a list of the variables to choose from and confirm that the time 
+#origin and units are appropriate......
+nc <- nc_open(netcdf.file)
+
+#select the variable
+print(names(nc[['var']]))
+var.name <- names(nc[['var']])[1]
+
+t <- ncvar_get(nc, "time")
+tunits <- ncatt_get(nc, "time", "units")
+print(tunits)
+
+nc_close(nc)
+
+dat <- brick(netcdf.file, varname= var.name)
 
 ## set spatial extent for area interested in. Longitude min - max then latitude min - max
 ## Creating this way allows for other created rasters to recognize as an extent with 
@@ -30,7 +47,7 @@ ext <- extent(60, 180, -80, -4)
 datC <- crop(dat, ext)
 
 ## Tree ring data
-trDat <- read.csv("chronos.csv", header = TRUE)
+trDat <- read.table(treering.file, header = TRUE)
 
 
 ## Decide start year and end year based on target and tree ring data
@@ -122,10 +139,10 @@ fullCorr <- function(x, y){ # x=climate data, y=column name from trDat in ""
   return(temp)
 }
 
-DJF_c <- fullCorr(DJF, "mr_kbp")
-MAM_c <- fullCorr(MAM, "mr_kbp")
-JJA_c <- fullCorr(JJA, "mr_kbp")
-SON_c <- fullCorr(SON, "mr_kbp")
+DJF_c <- fullCorr(DJF, "ars")
+MAM_c <- fullCorr(MAM, "ars")
+JJA_c <- fullCorr(JJA, "ars")
+SON_c <- fullCorr(SON, "ars")
 
 rm(SON, DJF, JJA, MAM, trDat, datM) 
 
@@ -154,8 +171,8 @@ library(gridExtra)
 #par.settings is various graphical settings outside of plots
 # +layer(...) adds the coastlines onto the map
 levelplot(Seasons, layout=c(2,2), col.regions = col5, pretty=TRUE, 
-          main= paste("Pearson R Reanal SFCP", F_yr, "-", L_yr),
-          colorkey=list(space="bottom"),
+          main= paste(title.txt, F_yr, "-", L_yr),
+          colorkey=list(space="right"),
           par.settings = list(layout.heights=list(xlab.key.padding=1),
                               strip.background=list(col="lightgrey")
           ), par.strip.text = list(font="bold")) + 
