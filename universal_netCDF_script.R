@@ -13,7 +13,7 @@ library(ncdf4)
 library(raster)
 
 #Name the files for convenience:
-netcdf.file <- "../NOAA20thc/hgt500.nc"
+netcdf.file <- "../CRUT/cru_ts4.01.1901.2016.tmp.dat.nc"
 treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
 # If the netcdf file has one layer, varname isn't required. 
@@ -31,11 +31,21 @@ var.name <- names(nc[['var']])[1]
 t <- ncvar_get(nc, "time")
 tunits <- ncatt_get(nc, "time", "units")
 print(tunits)
+tustr <- strsplit(tunits$value, " ")
 
 nc_close(nc)
 
 dat <- brick(netcdf.file, varname= var.name)
 
+#for some reason, brick cannot deal with "months since..." ???
+if (unlist(tustr)[1]=="months") {
+      mons <- length(t)
+      org <- as.Date(unlist(tustr)[3])
+      dates_f <- seq.Date(org, by="month", length.out=mons)
+      names(dat) <- dates_f
+    } else {
+      names(dat) <- names(dat)
+    }
 ## set spatial extent for area interested in. Longitude min - max then latitude min - max
 ## Creating this way allows for other created rasters to recognize as an extent with 
 ## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
