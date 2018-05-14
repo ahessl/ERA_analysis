@@ -40,8 +40,8 @@ dat <- brick(netcdf.file, varname= var.name)
 ## Creating this way allows for other created rasters to recognize as an extent with 
 ## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
 
-ext <- extent(60, 180, -80, -4)
-#ext <- extent(-180, 180, -80, 0)
+#ext <- extent(60, 180, -80, -4)
+ext <- extent(-180, 180, -80, 0)
 
 #Spatial crop using extent
 datC <- crop(dat, ext)
@@ -51,8 +51,8 @@ trDat <- read.table(treering.file, header = TRUE)
 
 
 ## Decide start year and end year based on target and tree ring data
-F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
-#F_yr <- 1979
+#F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
+F_yr <- 1959
 #L_yr <- 1998
 L_yr <- as.numeric(max(trDat$year))
 
@@ -106,13 +106,13 @@ names(datM) <- unique(yr_season) #Is this more efficient since it doesn't have t
 for (i in unique(substring(yr_season, 6))){
   d <- values(subset(datM, grep(i, names(datM), value=T)))
   d[is.na(d[])] <- -9999
-  #  assign(paste0(i), d)
+  assign(paste0(i), d)
   ## First Differences Method
-  r <- t(diff(t(d), 1))
-  ## Linear Model Method  
-  #lm_x <- seq(1:dim(get(i))[2])
-  #r <- t(resid(lm(t(get(i)) ~ lm_x))) 
-  #rm(lm_x)
+  #r <- t(diff(t(d), 1))
+  # Linear Model Method
+  lm_x <- seq(1:dim(get(i))[2])
+  r <- t(resid(lm(t(get(i)) ~ lm_x)))
+  rm(lm_x)
   assign(paste0(i), r)
   rm(r, d)
 }
@@ -163,6 +163,9 @@ col5 <- colorRampPalette(c('#08519c', 'gray96', "#fee0d2", "firebrick3"))
 #Load the lattice packages to display the maps
 library(rasterVis)
 library(gridExtra)
+
+title.txt <- basename(netcdf.file) #b/c I am losing track of what's what;
+#add wide or narrow!
 
 #Plot correlation map using the color ramp and levels using lattice
 #Layout dictates how many plots in row, col format
