@@ -67,9 +67,10 @@ F_yr <- 1959
 #L_yr <- 1998
 L_yr <- as.numeric(max(trDat$year))
 
+### Commented this out as it's done in the function later.....
 
 #Crop data to it
-trDat <-trDat[which(trDat$year >= F_yr-1 & trDat$year<= L_yr),]
+#trDat <-trDat[which(trDat$year >= F_yr-1 & trDat$year<= L_yr),]
 
 # Subset rasters based on the tree ring data. Won't exclude partial seasons.
 # second subset for that.
@@ -136,13 +137,14 @@ temp <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
 ## Correlation, masking all done in one go. Plot ready after this.
 
 fullCorr <- function(x, y){ # x=climate data, y=column name from trDat in ""
-  rng <- range(as.numeric(substr(grep(
+  rng <- range(as.numeric(substr(grep( #Creates date range based on the climate data
     unique(substr(as.character(colnames(x)), 7, 9)), 
     colnames(x), value=T),2, 5)))
-  trYr <-trDat[which(trDat$year >= rng[1] & trDat$year<= rng[2]),]
+  trYr <- setNames(data.frame(trDat$year, trDat[,y]), c("year", "data")) #internal function use -- speeds things up a little more for cor tests 
+  trYr <-trYr[which(trYr$year >= rng[1] & trYr$year<= rng[2]),] #crops the tree ring data based on the range; rings can be variable (stupid SH lag thing)
   for(i in 1:dim(x)[1]){
-    Cor[i] <- cor(x=x[i,], y = trYr[,y], method = 'pearson') ## create correlation based on tree ring
-    CorT[i] <- cor.test(x=x[i,], y = trYr[,y], method = 'pearson')$p.value ## p values used to create the cropped confidence intervals
+    Cor[i] <- cor(x=x[i,], y = trYr$data, method = 'pearson') ## create correlation based on tree ring
+    CorT[i] <- cor.test(x=x[i,], y = trYr$data, method = 'pearson')$p.value ## p values used to create the cropped confidence intervals
   }
   CorT[CorT > 0.05] <- NA
   Cor <- brick(Cor)
