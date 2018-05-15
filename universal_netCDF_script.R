@@ -10,7 +10,7 @@ rm(list=ls())
 
 ### Installing Shawn's fancy package
 library(devtools)
-devtools::install_github("scockrel/SpatialCorr/SpatCor")
+devtools::install_github("ahessl/SpatCor")
 
 setwd("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERAclimateExploration")
 
