@@ -19,8 +19,13 @@ library(raster)
 library(SpatCor)
 
 #Name the files for convenience:
+<<<<<<< HEAD
 netcdf.file <- "netcdf.nc"
 treering.file <- "treeringfile.txt"
+=======
+netcdf.file <- "../NOAA20thc/hgt500.nc"
+treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
+>>>>>>> 84aeb11506ffca15ffaebf254c29b6ca2a48057d
 
 # If the netcdf file has one layer, varname isn't required. 
 # If it has more than one, the first will be loaded and give names for all. Use varname="" and 
@@ -32,7 +37,11 @@ nc <- nc_open(netcdf.file)
 
 #select the variable
 print(names(nc[['var']]))
+<<<<<<< HEAD
 var.name <- names(nc[['var']])[7]
+=======
+var.name <- names(nc[['var']])[1] #MIGHT NEED ADJUSTING
+>>>>>>> 84aeb11506ffca15ffaebf254c29b6ca2a48057d
 
 t <- ncvar_get(nc, "time")
 tunits <- ncatt_get(nc, "time", "units")
@@ -57,8 +66,13 @@ if (unlist(tustr)[1]=="months") {
 ## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
 
 #ext <- extent(144, 149, -44, -40) #awap micro extent
+<<<<<<< HEAD
 ext <- extent(60, 180, -80, -4)
 #ext <- extent(-180, 180, -80, 0)
+=======
+#ext <- extent(60, 180, -80, -4)
+ext <- extent(-180, 180, -80, 0)
+>>>>>>> 84aeb11506ffca15ffaebf254c29b6ca2a48057d
 
 #Spatial crop using extent
 datC <- crop(dat, ext)
@@ -72,11 +86,6 @@ trDat <- read.table(treering.file, header = TRUE)
 F_yr <- 1959
 #L_yr <- 1998
 L_yr <- as.numeric(max(trDat$year))
-
-### Commented this out as it's done in the function later.....
-
-#Crop data to it
-#trDat <-trDat[which(trDat$year >= F_yr-1 & trDat$year<= L_yr),]
 
 # Subset rasters based on the tree ring data. Won't exclude partial seasons.
 # second subset for that.
