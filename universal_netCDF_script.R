@@ -7,14 +7,20 @@
 ## 6. Color ramp (col5)
 ## 7. Coastline file, although if packaged with this file it shouldn't need changed.
 rm(list=ls())
-#setwd("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERAclimateExploration")
+
+### Installing Shawn's fancy package
+library(devtools)
+devtools::install_github("scockrel/SpatialCorr/SpatCor")
+
+setwd("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERAclimateExploration")
 
 library(ncdf4)
 library(raster)
+library(SpatCor)
 
 #Name the files for convenience:
-netcdf.file <- "../AWAP_rain/bom_rain_month_19590101_20171231.nc"
-treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
+netcdf.file <- "netcdf.nc"
+treering.file <- "treeringfile.txt"
 
 # If the netcdf file has one layer, varname isn't required. 
 # If it has more than one, the first will be loaded and give names for all. Use varname="" and 
@@ -26,7 +32,7 @@ nc <- nc_open(netcdf.file)
 
 #select the variable
 print(names(nc[['var']]))
-var.name <- names(nc[['var']])[5]
+var.name <- names(nc[['var']])[7]
 
 t <- ncvar_get(nc, "time")
 tunits <- ncatt_get(nc, "time", "units")
@@ -50,8 +56,8 @@ if (unlist(tustr)[1]=="months") {
 ## Creating this way allows for other created rasters to recognize as an extent with 
 ## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
 
-ext <- extent(144, 149, -44, -40) #awap micro extent
-#ext <- extent(60, 180, -80, -4)
+#ext <- extent(144, 149, -44, -40) #awap micro extent
+ext <- extent(60, 180, -80, -4)
 #ext <- extent(-180, 180, -80, 0)
 
 #Spatial crop using extent
@@ -80,78 +86,40 @@ datC <- datC[[which(as.numeric(substr(names(dat), 2, 5)) >= F_yr &
                       as.numeric(substr(names(dat), 2, 5)) <= L_yr)]]
 datC <- datC[[-c(1:2, (nlayers(datC)-3):nlayers(datC))]] #removes first incomplete season JF and last SON from year
 
-library(chron)
 
-yr_mo_dy <- substr(names(datC), 2, 11)
-d <- as.Date(gsub(".", '/', yr_mo_dy, fixed = T)) #fix the format by replacing "." with "/"
-##AH: changed $year==12 to $mon<8 (POSIXlt indexes months from 0
-##AH: and growing season starts in SEP) 
+### Use seasNm from Shawn - data, hemisphere ("s", "n"), lag (0,1), function (e.g. sum, mean)
+datM <- seasNm(datC, "s", 0, mean)
 
-### Current Growing Year (as determined by tree dates)
-yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering 
-                      as.POSIXlt( d )$year - 
-                      1*(as.POSIXlt( d )$mon<8) ,   # offset needed for growing season in SH
-                    c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
-                      1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
-                    , sep="-")
-
-### One Year Climate Lag (e.g. tree year 1980 will be associated with climate data for tree year 1979)
-#yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering 
-#                      as.POSIXlt( d )$year + 
-#                      1*(as.POSIXlt( d )$mon>7) ,   # offset needed for lagged season in SH
-#                    c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
-#                      1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
-#                    , sep="-")
-
-##remove unnecessary files
-rm(yr_mo_dy, d)
-
-# ##Get Mean/Sum of seasonal climate variables
-datM <- stackApply(datC, yr_season, sum) #raster with mean for each season
-names(datM) <- unique(yr_season) #Is this more efficient since it doesn't have to call on itself?
 
 # Subset season, replace NAs with -9999 for correlation/regression.
 # Can run linear model extracting residuals or first differences.
 
 # SC: First Differences added!
 
-for (i in unique(substring(yr_season, 6))){
+for (i in unique(substring(names(datM), 7))){ 
   d <- values(subset(datM, grep(i, names(datM), value=T)))
   d[is.na(d[])] <- -9999
   assign(paste0(i), d)
   ## First Differences Method
-  #r <- t(diff(t(d), 1))
+  r <- t(diff(t(d), 1))
   # Linear Model Method
-  lm_x <- seq(1:dim(get(i))[2])
-  r <- t(resid(lm(t(get(i)) ~ lm_x)))
-  rm(lm_x)
-  assign(paste0(i), r)
-  rm(r, d)
+  #lm_x <- seq(1:dim(get(i))[2])
+  #r <- t(resid(lm(t(get(i)) ~ lm_x)))
+  #rm(lm_x)
+ # assign(paste0(i), r)
+  #rm(r, d)
 }
+
+#This doesn't work yet, trying to figure it out.....Make changes easier....
+#detrCL(datM, "fd")
 
 #create rasters to store the spatial correlations
 CorT <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
 Cor <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
 temp <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
 
-## Correlation, masking all done in one go. Plot ready after this.
-
-fullCorr <- function(x, y){ # x=climate data, y=column name from trDat in ""
-  rng <- range(as.numeric(substr(grep( #Creates date range based on the climate data
-    unique(substr(as.character(colnames(x)), 7, 9)), 
-    colnames(x), value=T),2, 5)))
-  trYr <- setNames(data.frame(trDat$year, trDat[,y]), c("year", "data")) #internal function use -- speeds things up a little more for cor tests 
-  trYr <-trYr[which(trYr$year >= rng[1] & trYr$year<= rng[2]),] #crops the tree ring data based on the range; rings can be variable (stupid SH lag thing)
-  for(i in 1:dim(x)[1]){
-    Cor[i] <- cor(x=x[i,], y = trYr$data, method = 'pearson') ## create correlation based on tree ring
-    CorT[i] <- cor.test(x=x[i,], y = trYr$data, method = 'pearson')$p.value ## p values used to create the cropped confidence intervals
-  }
-  CorT[CorT > 0.05] <- NA
-  Cor <- brick(Cor)
-  temp <- mask(Cor, CorT)
-  return(temp)
-}
-
+# part of the SpatCor package
+# Working on how to integrate the previous 3 things...
 DJF_c <- fullCorr(DJF, "ars")
 MAM_c <- fullCorr(MAM, "ars")
 JJA_c <- fullCorr(JJA, "ars")
