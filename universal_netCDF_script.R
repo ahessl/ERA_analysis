@@ -12,7 +12,7 @@ rm(list=ls())
 library(devtools)
 devtools::install_github("ahessl/ERA_analysis/SpatCor")
 
-setwd("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERAclimateExploration")
+#setwd("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERAclimateExploration")
 
 library(ncdf4)
 library(raster)
@@ -20,8 +20,8 @@ library(SpatCor)
 
 #Name the files for convenience:
 
-netcdf.file <- "netcdf.nc"
-treering.file <- "treeringfile.txt"
+netcdf.file <- "../ERA_Download/era20c_msl.nc"
+treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
 # If the netcdf file has one layer, varname isn't required. 
 # If it has more than one, the first will be loaded and give names for all. Use varname="" and 
@@ -60,7 +60,7 @@ if (unlist(tustr)[1]=="months") {
 ## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
 
 #ext <- extent(144, 149, -44, -40) #awap micro extent
-ext <- extent(60, 180, -80, -4)
+ext <- extent(0, 180, -80, -4)
 #ext <- extent(-180, 180, -80, 0)
 
 
@@ -100,13 +100,13 @@ for (i in unique(substring(names(datM), 7))){
   d[is.na(d[])] <- -9999
   assign(paste0(i), d)
   ## First Differences Method
-  r <- t(diff(t(d), 1))
+  #r <- t(diff(t(d), 1))
   # Linear Model Method
-  #lm_x <- seq(1:dim(get(i))[2])
-  #r <- t(resid(lm(t(get(i)) ~ lm_x)))
-  #rm(lm_x)
- # assign(paste0(i), r)
-  #rm(r, d)
+  lm_x <- seq(1:dim(get(i))[2])
+  r <- t(resid(lm(t(get(i)) ~ lm_x)))
+  rm(lm_x)
+  assign(paste0(i), r)
+  rm(r, d)
 }
 
 #This doesn't work yet, trying to figure it out.....Make changes easier....
@@ -116,6 +116,23 @@ for (i in unique(substring(names(datM), 7))){
 CorT <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
 Cor <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
 temp <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
+
+## Correlation, masking all done in one go. Plot ready after this.
+
+fullCorr <- function(x, y){ # x=climate data, y=column name from trDat in ""
+  rng <- range(as.numeric(substr(grep(
+    unique(substr(as.character(colnames(x)), 7, 9)), 
+    colnames(x), value=T),2, 5)))
+  trYr <-trDat[which(trDat$year >= rng[1] & trDat$year<= rng[2]),]
+  for(i in 1:dim(x)[1]){
+    Cor[i] <- cor(x=x[i,], y = trYr[,y], method = 'pearson') ## create correlation based on tree ring
+    CorT[i] <- cor.test(x=x[i,], y = trYr[,y], method = 'pearson')$p.value ## p values used to create the cropped confidence intervals
+  }
+  CorT[CorT > 0.05] <- NA
+  Cor <- brick(Cor)
+  temp <- mask(Cor, CorT)
+  return(temp)
+}
 
 # part of the SpatCor package
 # Working on how to integrate the previous 3 things...
@@ -145,7 +162,7 @@ library(rasterVis)
 library(gridExtra)
 
 title.txt <- basename(netcdf.file) #b/c I am losing track of what's what;
-#add wide or narrow!
+
 
 #Plot correlation map using the color ramp and levels using lattice
 #Layout dictates how many plots in row, col format
