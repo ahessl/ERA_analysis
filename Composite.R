@@ -56,6 +56,7 @@ datC <- datC[[which(as.numeric(substr(names(datC), 2, 5)) >= F_yr &
                       as.numeric(substr(names(datC), 2, 5)) <= L_yr)]]
 datC <- datC[[-c(1:2, (nlayers(datC)-3):nlayers(datC))]] #removes first incomplete season JF and last SON from year
 
+library(SpatCor)
 datM <- seasNm(datC, "s", 0, mean)
 ##### Seasonal Indexing ######
 #library(chron)
@@ -95,7 +96,6 @@ datM <- seasNm(datC, "s", 0, mean)
 ## Reproduce error codes: 
 ##    com.h <- compCalc(trDat$mr_ars, "upper", datM)
 
-library(SpatCor)
 com.h <- compCalc(trDat$ars, .90, datM)
 com.l <- compCalc(trDat$ars, .10, datM, 5)
 
@@ -152,7 +152,6 @@ com.l <- compCalc(trDat$ars, .10, datM, 5)
 ########### Plotting the composites ###########
 
 library(rgdal)
-library(rgeos)
 coast_shapefile <- crop(readOGR("../GISData/ne_10m_coastline.shp"), ext)
 
 # Create color ramps for mapping and number of colors to use
@@ -161,7 +160,6 @@ col5 <- colorRampPalette(c('#08519c', 'lightblue3','gray96', "#fee0d2", "firebri
 
 # Load the lattice packages to display the maps
 library(rasterVis)
-library(gridExtra)
 
 title.txt <- basename(netcdf.file) #b/c I am losing track of what's what;
 #add wide or narrow!
