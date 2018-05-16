@@ -56,26 +56,26 @@ datC <- datC[[which(as.numeric(substr(names(datC), 2, 5)) >= F_yr &
                       as.numeric(substr(names(datC), 2, 5)) <= L_yr)]]
 datC <- datC[[-c(1:2, (nlayers(datC)-3):nlayers(datC))]] #removes first incomplete season JF and last SON from year
 
-
+datM <- seasNm(datC, "s", 0, mean)
 ##### Seasonal Indexing ######
-library(chron)
+#library(chron)
 
-yr_mo_dy <- substr(names(datC), 2, 11)
-d <- as.Date(gsub(".", '/', yr_mo_dy, fixed = T)) #fix the format by replacing "." with "/"
+#yr_mo_dy <- substr(names(datC), 2, 11)
+#d <- as.Date(gsub(".", '/', yr_mo_dy, fixed = T)) #fix the format by replacing "." with "/"
 ## changed $year==12 to $mon<8 (POSIXlt indexes months from 0
 ## and growing season starts in SEP) 
 
 
-yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering 
-                      as.POSIXlt( d )$year - 
-                      1*(as.POSIXlt( d )$mon<8) ,   # offset needed for grwoing season in SH
-                    c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
-                      1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
-                    , sep="-")
+#yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering 
+                      #as.POSIXlt( d )$year - 
+                      #1*(as.POSIXlt( d )$mon<8) ,   # offset needed for grwoing season in SH
+                    #c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
+                     # 1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
+                    #, sep="-")
 
 ## Get yearly seasonal means
-datM <- stackApply(datC, yr_season, mean) 
-names(datM) <- unique(yr_season)
+#datM <- stackApply(datC, yr_season, mean) 
+#names(datM) <- unique(yr_season)
 
 ##Need to detrend data####
 
@@ -83,10 +83,26 @@ names(datM) <- unique(yr_season)
 
 #### Create seasonal mean of all climate data ####
 
+## Added in some SpatCor fanciness to get things done a little faster with fewer commands.
+## comCalc has 4 arguments tree ring data, numeric quantile, data, 
+## and up (default is upper) - for math purposes; replace up with any value and you get lower quantile.
+## 
+## Error Message:
+## If quantile is not a number, stops the whole thing
+## Need to add this error message
+## If the seasons aren't even, stops the process and provides the data to determine the season.
+##
+## Reproduce error codes: 
+##    com.h <- compCalc(trDat$mr_ars, "upper", datM)
+
+library(SpatCor)
+com.h <- compCalc(trDat$ars, .90, datM)
+com.l <- compCalc(trDat$ars, .10, datM, 5)
+
 ## SC: This needs cleaned a bit more.
-datMs <- stackApply(datM,substring(names(datM), 7), mean) #create seasonal mean of entire dataset
-names(datMs) <- unique(substring(names(datM), 7)) #give them meaningful names
-datMs <- subset(datMs, c(3,4,1,2)) #reorder because they are setup as MAM, JJA, SON, DJF
+#datMs <- stackApply(datM,substring(names(datM), 7), mean) #create seasonal mean of entire dataset
+#names(datMs) <- unique(substring(names(datM), 7)) #give them meaningful names
+#datMs <- subset(datMs, c(3,4,1,2)) #reorder because they are setup as MAM, JJA, SON, DJF
 
 
 #### Create seasonal mean of high years and low years (whatever that means for your purposes) ####
@@ -113,25 +129,25 @@ datMs <- subset(datMs, c(3,4,1,2)) #reorder because they are setup as MAM, JJA, 
 ## There has been very little work done to this. 
 #Better to select based on quantiles:
 ## Smallest x% years, Largest x% years
-quants <- quantile(trDat$ars, probs = c(0.10, 0.90))
-lq_yrs <- trDat$year[which(trDat$ars<quants[1])]
-uq_yrs <- trDat$year[which(trDat$ars>quants[2])]
+#quants <- quantile(trDat$ars, probs = c(0.10, 0.90))
+#lq_yrs <- trDat$year[which(trDat$ars<quants[1])]
+#uq_yrs <- trDat$year[which(trDat$ars>quants[2])]
 
 ## Extract wide and narrow years from TR indices. h for high growth; l for low growth
-tr.h <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in% uq_yrs) ]]
-tr.l <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in% lq_yrs) ]]
+#tr.h <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in% uq_yrs) ]]
+#tr.l <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in% lq_yrs) ]]
 
-dat.h <- stackApply(tr.h, substring(names(tr.h), 7), mean) #seasonal mean for wide years
-names(dat.h) <- unique(substring(names(tr.h), 7)) #meaningful names
-dat.h <- subset(dat.h, c("SON", "DJF", "MAM", "JJA")) #keeps order correct
+#dat.h <- stackApply(tr.h, substring(names(tr.h), 7), mean) #seasonal mean for wide years
+#names(dat.h) <- unique(substring(names(tr.h), 7)) #meaningful names
+#dat.h <- subset(dat.h, c("SON", "DJF", "MAM", "JJA")) #keeps order correct
 
-dat.l <- stackApply(tr.l, substring(names(tr.l), 7), mean)
-names(dat.l) <- unique(substring(names(tr.l), 7))
-dat.l <- subset(dat.l, c("SON", "DJF", "MAM", "JJA"))
+#dat.l <- stackApply(tr.l, substring(names(tr.l), 7), mean)
+#names(dat.l) <- unique(substring(names(tr.l), 7))
+#dat.l <- subset(dat.l, c("SON", "DJF", "MAM", "JJA"))
 
 
-com.h <- dat.h - datMs #composite difference
-com.l <- dat.l - datMs #composite difference
+#com.h <- dat.h - datMs #composite difference
+#com.l <- dat.l - datMs #composite difference
 
 ########### Plotting the composites ###########
 
