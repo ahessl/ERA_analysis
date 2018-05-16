@@ -3,7 +3,7 @@ rm(list=ls())
 library(raster)
 library(ncdf4)
 
-netcdf.file <- "../NOAA20thc/hgt500.nc"
+netcdf.file <- "../ERA_Download/era20c_z500.nc"
 treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
 # Get a list of the stupid variables to choose from and confirm that the time 
@@ -17,12 +17,23 @@ var.name <- names(nc[['var']])[1]
 t <- ncvar_get(nc, "time")
 tunits <- ncatt_get(nc, "time", "units")
 print(tunits)
+tustr <- strsplit(tunits$value, " ")
 
 nc_close(nc)
 
-
 dat <- brick(netcdf.file, varname=var.name) #adjusted for selection above
+
 trDat <- read.table(treering.file, header = TRUE)
+
+#for some reason, brick cannot deal with "months since..." ???
+  if (unlist(tustr)[1]=="months") {
+      mons <- length(t)
+      org <- as.Date(unlist(tustr)[3])
+      dates_f <- seq.Date(org, by="month", length.out=mons)
+      names(dat) <- dates_f
+    } else {
+      names(dat) <- names(dat)
+    }
 
 ## Select start year and end year based on target and tree ring data
 F_yr <- 1959#min(as.numeric(substr(names(dat), 2, 5)))
@@ -35,8 +46,8 @@ trDat <-trDat[which(trDat$year >= F_yr-1 & trDat$year<= L_yr),]
 ## Creating this way allows for other created rasters to recognize as an extent with 
 ## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
 
-ext <- extent(60, 200.25, -80.25, -4.50)
-
+#ext <- extent(60, 200.25, -80.25, -4.50)
+ext <- extent(0, 180, -80, -4)
 #Spatial crop using extent
 datC <- crop(dat, ext)
 
@@ -107,16 +118,17 @@ lq_yrs <- trDat$year[which(trDat$ars<quants[1])]
 uq_yrs <- trDat$year[which(trDat$ars>quants[2])]
 
 ## Extract wide and narrow years from TR indices. h for high growth; l for low growth
-#tr.h <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  trDat$year[order(trDat$mr_kbp)[1:5]])]]
-#tr.l <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in%  trDat$year[order(trDat$mr_kbp, decreasing = T)[1:5]])]]
 tr.h <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in% uq_yrs) ]]
 tr.l <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in% lq_yrs) ]]
 
 dat.h <- stackApply(tr.h, substring(names(tr.h), 7), mean) #seasonal mean for wide years
 names(dat.h) <- unique(substring(names(tr.h), 7)) #meaningful names
+dat.h <- subset(dat.h, c("SON", "DJF", "MAM", "JJA")) #keeps order correct
 
 dat.l <- stackApply(tr.l, substring(names(tr.l), 7), mean)
 names(dat.l) <- unique(substring(names(tr.l), 7))
+dat.l <- subset(dat.l, c("SON", "DJF", "MAM", "JJA"))
+
 
 com.h <- dat.h - datMs #composite difference
 com.l <- dat.l - datMs #composite difference
@@ -139,13 +151,15 @@ title.txt <- basename(netcdf.file) #b/c I am losing track of what's what;
 #add wide or narrow!
              
 # Make a plot!
-levelplot(com.l, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste(title.txt, F_yr, "-", L_yr),
+ levelplot(com.h, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste(title.txt, F_yr, "-", L_yr),
           colorkey=list(space="right"),
           par.settings = list(layout.heights=list(xlab.key.padding=1),
                               strip.background=list(col="lightgrey")
           ), par.strip.text = list(font="bold")) + 
   layer(sp.lines(coast_shapefile))
 
+ 
+################################################################### 
 #### Correlation with tree ring data ####
 
 # Pull High Value Years from tree ring data using c.cm from before
