@@ -18,11 +18,11 @@ Extract functions from universalNetCDF to:
       * Specific start and end months
 
 
-2. fullCorr.R - Correlate seasonal climate grids with tree ring time series (indices)
+2. fullCorr.R - Correlate seasonal climate grids with proxy time series (indices)
 
   *Needs*
   - Holding matrices (Cor, CorT, temp) added into function
-
+  - More generic input of time series to allow for other kinds of data and data formats (ice core data!)
 
 3. detrCL.R - Detrend both seasonalized cliamte data and tree ring time series to remove longterm trends
 
