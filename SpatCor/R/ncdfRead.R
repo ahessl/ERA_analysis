@@ -6,11 +6,11 @@
 #' @export
 
 ncdfRead <- function(ncdf){
-  ncdf4::nc <- nc_open(ncdf)
+  nc <- ncdf4::nc_open(ncdf)
   
   #select the variable
-  idx <- menu(names(ncdf4::nc[['var']]), "What variable would you like?")
-  var.name <<- names(ncdf4::nc[['var']])[idx]
+  idx <- menu(names(nc[['var']]), "What variable would you like?")
+  var.name <<- names(nc[['var']])[idx]
   
   t <- ncdf4::ncvar_get(nc, "time")
   tunits <- ncdf4::ncatt_get(nc, "time", "units")
