@@ -31,12 +31,22 @@ Extract functions from universalNetCDF to:
   - Tree rings added
   - This function may not be feasible
 
-
-4. compCalc.R - Create composites of climate data based on use-defined quantile of tree ring indices
+4. compCalc.R - Create composites of climate data based on user-defined quantile of tree ring indices
 
   *Needs*
   - Error message for uneven seasons
-  
+
+5. ncdfRead.R - imports netcdf file, allows operator to choose variable in the console. Extracts the variable data and determines whether the naming system is "months" or "days and names layers appropriately. Lastly, rotates coordinate system of raster if longitude is not -180 - 180.
+ 
+  *Needs*
+  - Tested
+  - Clean-up of time units
+    * Only have to worry about months and days? or are there other variants?
+  - Runs a little slower than Shawn would like because of rotate, but it may not be avoidable.
+    * Combine cropping by extent for this portion?
+  - Rotate questions
+    * Will values always be < 181?
+
 Build a package called SpatCorr
 
 
