@@ -12,7 +12,7 @@ detrCL(climData, mod)
 \item{mod}{mode of detrending}
 }
 \value{
-results from datM
+results from climData
 }
 \description{
 This function allows you to create spatial field correlations with tree rings and

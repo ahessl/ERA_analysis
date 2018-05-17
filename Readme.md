@@ -7,17 +7,36 @@ Tools to compare a time series (here tree ring chronology) with climate field da
 Extract functions from universalNetCDF to:
 1. seasNm.R - Seasonalize gridded climate data (netCDF)
 
-*Needs x, y, z*
+  *Needs*
+  - create defaults for hem, lg, FUN for quick processing
+    hem: default NH
+    lg: default no lag 0
+    FUN: default....mean?
+  - create more flexibility for different combinations e.g.:
+      * Warm vs. Cool season
+      * Two-month
+      * Specific start and end months
+
 
 2. fullCorr.R - Correlate seasonal climate grids with tree ring time series (indices)
 
-*Needs x, y, z*
+  *Needs*
+  - Holding matrices (Cor, CorT, temp) added into function
+
 
 3. detrCL.R - Detrend both seasonalized cliamte data and tree ring time series to remove longterm trends
 
-*Needs x, y, z*
+  *Needs*
+  - default for mod; should be no detrending
+  - Tree rings added
+  - This function may not be feasible
 
 
+4. compCalc.R - Create composites of climate data based on use-defined quantile of tree ring indices
+
+  *Needs*
+  - Error message for uneven seasons
+  
 Build a package called SpatCorr
 
 
