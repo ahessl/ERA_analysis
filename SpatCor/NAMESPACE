@@ -3,5 +3,4 @@
 export(compCalc)
 export(detrCL)
 export(fullCorr)
-export(ncdfRead)
 export(seasNm)
