@@ -12,8 +12,8 @@ ncdfRead <- function(ncdf){
   idx <- menu(names(ncdf4::nc[['var']]), "What variable would you like?")
   var.name <<- names(ncdf4::nc[['var']])[idx]
   
-  #t <- ncdf4::ncvar_get(nc, "time")
-  #tunits <- ncdf4::ncatt_get(nc, "time", "units")
+  t <- ncdf4::ncvar_get(nc, "time")
+  tunits <- ncdf4::ncatt_get(nc, "time", "units")
   tustr <- strsplit(tunits$value, " ")[[1]][1]
   if (max(nc$dim$longitude) < 181){
     dat <- raster::brick(ncdf, varname = var.name)
