@@ -2,42 +2,49 @@
 rm(list=ls())
 library(raster)
 library(ncdf4)
+library(SpatCor)
 
 netcdf.file <- "../SST/ersstv5.nc"
 treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
+## New function....gets rid of the messing with the file here.
+## Also has interactive functionality!!!
+dat <- ncdfRead(netcdf.file)
+
 # Get a list of the stupid variables to choose from and confirm that the time 
 #origin and units are appropriate......
-nc <- nc_open(netcdf.file)
+#nc <- nc_open(netcdf.file)
 
 #select the variable
-print(names(nc[['var']]))
-var.name <- names(nc[['var']])[1]
+#print(names(nc[['var']]))
+#var.name <- names(nc[['var']])[1]
 
-t <- ncvar_get(nc, "time")
-tunits <- ncatt_get(nc, "time", "units")
-print(tunits)
-tustr <- strsplit(tunits$value, " ")
+#t <- ncvar_get(nc, "time")
+#tunits <- ncatt_get(nc, "time", "units")
+#print(tunits)
+#tustr <- strsplit(tunits$value, " ")
 
-nc_close(nc)
+#nc_close(nc)
 
-dat <- rotate(brick(netcdf.file, varname=var.name)) #adjusted for selection above
+#dat <- rotate(brick(netcdf.file, varname=var.name)) #adjusted for selection above
 #rotate converts lons from 0-360 to -180-180
+
+
+
+#for some reason, brick cannot deal with "months since..." ???
+#  if (unlist(tustr)[1]=="months") {
+#      mons <- length(t)
+#      org <- as.Date(unlist(tustr)[3])
+#      dates_f <- seq.Date(org, by="month", length.out=mons)
+#      names(dat) <- dates_f
+#    } else {
+#      names(dat) <- names(dat)
+#    }
 
 trDat <- read.table(treering.file, header = TRUE)
 
-#for some reason, brick cannot deal with "months since..." ???
-  if (unlist(tustr)[1]=="months") {
-      mons <- length(t)
-      org <- as.Date(unlist(tustr)[3])
-      dates_f <- seq.Date(org, by="month", length.out=mons)
-      names(dat) <- dates_f
-    } else {
-      names(dat) <- names(dat)
-    }
-
 ## Select start year and end year based on target and tree ring data
-F_yr <- 1959#min(as.numeric(substr(names(dat), 2, 5)))
+F_yr <- min(as.numeric(substr(names(dat), 2, 5)))
 L_yr <- as.numeric(max(trDat$year))
 
 #Crop data to it
@@ -47,8 +54,8 @@ trDat <-trDat[which(trDat$year >= F_yr-1 & trDat$year<= L_yr),]
 ## Creating this way allows for other created rasters to recognize as an extent with 
 ## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
 
-#ext <- extent(60, 200.25, -80.25, -4.50)
-ext <- extent(-180, 180, -80, -4)
+ext <- extent(60, 200.25, -80.25, -4.50)
+#ext <- extent(-180, 180, -80, -4)
 
 #Spatial crop using extent
 datC <- crop(dat, ext)
@@ -58,7 +65,7 @@ datC <- datC[[which(as.numeric(substr(names(datC), 2, 5)) >= F_yr &
                       as.numeric(substr(names(datC), 2, 5)) <= L_yr)]]
 datC <- datC[[-c(1:2, (nlayers(datC)-3):nlayers(datC))]] #removes first incomplete season JF and last SON from year
 
-library(SpatCor)
+#library(SpatCor)
 datM <- seasNm(datC, "s", 0, mean)
 ##### Seasonal Indexing ######
 #library(chron)
@@ -130,9 +137,9 @@ com.l <- compCalc(trDat$ars, .15, datM, 5)
 # based on quantiles:
 ## Smallest x% years, Largest x% years
 
-quants <- quantile(trDat$ars, probs = c(0.15, 0.85))
-lq_yrs <- trDat$year[which(trDat$ars<quants[1])]
-uq_yrs <- trDat$year[which(trDat$ars>quants[2])]
+#quants <- quantile(trDat$ars, probs = c(0.15, 0.85))
+#lq_yrs <- trDat$year[which(trDat$ars<quants[1])]
+#uq_yrs <- trDat$year[which(trDat$ars>quants[2])]
 
 
 ## Extract wide and narrow years from TR indices. h for high growth; l for low growth
@@ -148,8 +155,8 @@ uq_yrs <- trDat$year[which(trDat$ars>quants[2])]
 #dat.l <- subset(dat.l, c("SON", "DJF", "MAM", "JJA"))
 
 
-com.h <- dat.h - datMs #composite difference to get anomalies
-com.l <- dat.l - datMs #composite difference to get anomalies
+#com.h <- dat.h - datMs #composite difference to get anomalies
+#com.l <- dat.l - datMs #composite difference to get anomalies
 
 ########### Plotting the composites ###########
 
@@ -164,27 +171,40 @@ col5 <- colorRampPalette(c('#08519c', 'lightblue3','gray96', "#fee0d2", "firebri
 library(rasterVis)
 
 title.txt <- basename(netcdf.file) #b/c I am losing track of what's what;
-product <- unlist(strsplit (netcdf.file, "[/]"))[2]
+product <- toupper(var.name)
+
+compNms <-c("com.h", "com.l")
+for(i in compNms){
+  rwdth <- toupper(substring(i, 5))
+  pdf(paste(product, "_", title.txt, "_", F_yr, "_", L_yr, rwdth,".pdf", sep=""),
+      width=6, height=4.3, pointsize=7, family="Helvetica")
+  print(levelplot(get(i), layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste(title.txt, F_yr, "-", L_yr),
+                  colorkey=list(space="right"),
+                  par.settings = list(layout.heights=list(xlab.key.padding=1),
+                                      strip.background=list(col="lightgrey")), par.strip.text = list(font="bold")) + 
+          layer(sp.lines(coast_shapefile)))
+  dev.off()
+}
 
 # Make two plots and save them in directory called "Composites"
 #Can you make a loop to do this?  I struggled and gave up.
-pdf(paste("../Composites/", product, "_", title.txt, "_", F_yr, "_", L_yr, "L", ".pdf", sep=""), width=6, height=4.3, pointsize=7, family="Helvetica")
- levelplot(com.l, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste(title.txt, F_yr, "-", L_yr),
-          colorkey=list(space="right"),
-          par.settings = list(layout.heights=list(xlab.key.padding=1),
-                              strip.background=list(col="lightgrey")
-          ), par.strip.text = list(font="bold")) + 
-  layer(sp.lines(coast_shapefile))
- dev.off()
+#pdf(paste("../Composites/", product, "_", title.txt, "_", F_yr, "_", L_yr, "L", ".pdf", sep=""), width=6, height=4.3, pointsize=7, family="Helvetica")
+# levelplot(com.l, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste(title.txt, F_yr, "-", L_yr),
+#          colorkey=list(space="right"),
+#          par.settings = list(layout.heights=list(xlab.key.padding=1),
+#                              strip.background=list(col="lightgrey")
+#          ), par.strip.text = list(font="bold")) + 
+#  layer(sp.lines(coast_shapefile))
+# dev.off()
  
- pdf(paste("../Composites/", product, "_", title.txt, "_", F_yr, "_", L_yr, "H",".pdf", sep=""), width=6, height=4.3, pointsize=7, family="Helvetica")
- levelplot(com.h, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste(title.txt, F_yr, "-", L_yr),
-           colorkey=list(space="right"),
-           par.settings = list(layout.heights=list(xlab.key.padding=1),
-                               strip.background=list(col="lightgrey")
-           ), par.strip.text = list(font="bold")) + 
-   layer(sp.lines(coast_shapefile))
- dev.off() 
+# pdf(paste("../Composites/", product, "_", title.txt, "_", F_yr, "_", L_yr, "H",".pdf", sep=""), width=6, height=4.3, pointsize=7, family="Helvetica")
+# levelplot(as.name(try[1]), layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste(title.txt, F_yr, "-", L_yr),
+#           colorkey=list(space="right"),
+#           par.settings = list(layout.heights=list(xlab.key.padding=1),
+#                               strip.background=list(col="lightgrey")
+#           ), par.strip.text = list(font="bold")) + 
+#   layer(sp.lines(coast_shapefile))
+# dev.off()
 
 ################################################################### 
 #### Correlation with tree ring data ####
