@@ -98,8 +98,8 @@ datM <- seasNm(datC, "s", 0, mean)
 ## Reproduce error codes: 
 ##    com.h <- compCalc(trDat$mr_ars, "upper", datM)
 
-com.h <- compCalc(trDat$ars, .90, datM)
-com.l <- compCalc(trDat$ars, .10, datM, 5)
+com.h <- compCalc(trDat$ars, .85, datM)
+com.l <- compCalc(trDat$ars, .15, datM, 5)
 
 ## SC: This needs cleaned a bit more.
 #datMs <- stackApply(datM,substring(names(datM), 7), mean) #create seasonal mean of entire dataset
@@ -126,20 +126,14 @@ com.l <- compCalc(trDat$ars, .10, datM, 5)
 #com.c <- dat.c - datMs #composite difference low years
 
 
-#### Tree ring guiding the analysis....for whatever it's worth. ####
-
-## There has been very little work done to this. 
-#Better to select based on quantiles:
+#### Select years to composite based on tree rings.
+# based on quantiles:
 ## Smallest x% years, Largest x% years
-<<<<<<< HEAD
+
 quants <- quantile(trDat$ars, probs = c(0.15, 0.85))
 lq_yrs <- trDat$year[which(trDat$ars<quants[1])]
 uq_yrs <- trDat$year[which(trDat$ars>quants[2])]
-=======
-#quants <- quantile(trDat$ars, probs = c(0.10, 0.90))
-#lq_yrs <- trDat$year[which(trDat$ars<quants[1])]
-#uq_yrs <- trDat$year[which(trDat$ars>quants[2])]
->>>>>>> fa85781a128694b9ae54ede8f86a5ab0039f27da
+
 
 ## Extract wide and narrow years from TR indices. h for high growth; l for low growth
 #tr.h <- datM[[which(as.numeric(substr(names(datM), 2, 5)) %in% uq_yrs) ]]
@@ -154,13 +148,8 @@ uq_yrs <- trDat$year[which(trDat$ars>quants[2])]
 #dat.l <- subset(dat.l, c("SON", "DJF", "MAM", "JJA"))
 
 
-<<<<<<< HEAD
 com.h <- dat.h - datMs #composite difference to get anomalies
 com.l <- dat.l - datMs #composite difference to get anomalies
-=======
-#com.h <- dat.h - datMs #composite difference
-#com.l <- dat.l - datMs #composite difference
->>>>>>> fa85781a128694b9ae54ede8f86a5ab0039f27da
 
 ########### Plotting the composites ###########
 
