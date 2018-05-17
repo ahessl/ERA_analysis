@@ -171,7 +171,7 @@ col5 <- colorRampPalette(c('#08519c', 'lightblue3','gray96', "#fee0d2", "firebri
 library(rasterVis)
 
 title.txt <- basename(netcdf.file) #b/c I am losing track of what's what;
-product <- toupper(var.name)
+product <- unlist(strsplit (netcdf.file, "[/]"))[2]
 
 compNms <-c("com.h", "com.l")
 for(i in compNms){
