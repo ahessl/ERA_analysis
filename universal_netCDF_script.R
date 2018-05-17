@@ -20,7 +20,7 @@ library(SpatCor)
 
 #Name the files for convenience:
 
-netcdf.file <- "../ERA_Download/era20c_msl.nc"
+netcdf.file <- "../SST/ersstv5.nc"
 treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
 # If the netcdf file has one layer, varname isn't required. 
@@ -44,7 +44,7 @@ tustr <- strsplit(tunits$value, " ")
 
 nc_close(nc)
 
-dat <- brick(netcdf.file, varname= var.name)
+dat <- rotate(brick(netcdf.file, varname= var.name)) #rotate converts lons from 0-360 to -180-180
 
 #for some reason, brick cannot deal with "months since..." ???
 if (unlist(tustr)[1]=="months") {
@@ -60,8 +60,8 @@ if (unlist(tustr)[1]=="months") {
 ## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
 
 #ext <- extent(144, 149, -44, -40) #awap micro extent
-ext <- extent(0, 180, -80, -4)
-#ext <- extent(-180, 180, -80, 0)
+#ext <- extent(0, 180, -80, -4)
+ext <- extent(-180, 180, -80, 0)
 
 
 #Spatial crop using extent
@@ -162,7 +162,7 @@ library(rasterVis)
 library(gridExtra)
 
 title.txt <- basename(netcdf.file) #b/c I am losing track of what's what;
-
+product <- unlist(strsplit (netcdf.file, "[/]"))[2]
 
 #Plot correlation map using the color ramp and levels using lattice
 #Layout dictates how many plots in row, col format
@@ -170,6 +170,7 @@ title.txt <- basename(netcdf.file) #b/c I am losing track of what's what;
 #colorkey is information about the legend, wanted bottom so have to give it the space
 #par.settings is various graphical settings outside of plots
 # +layer(...) adds the coastlines onto the map
+pdf(paste("../SpatialCorr/", product, "_", title.txt, "_", F_yr, "_", L_yr, ".pdf", sep=""), width=6, height=4.3, pointsize=7, family="Helvetica")
 levelplot(Seasons, layout=c(2,2), col.regions = col5, pretty=TRUE, 
           main= paste(title.txt, F_yr, "-", L_yr),
           colorkey=list(space="right"),
@@ -177,5 +178,5 @@ levelplot(Seasons, layout=c(2,2), col.regions = col5, pretty=TRUE,
                               strip.background=list(col="lightgrey")
           ), par.strip.text = list(font="bold")) + 
   layer(sp.lines(coast_shapefile))
-
+dev.off()
 

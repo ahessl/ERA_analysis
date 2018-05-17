@@ -3,7 +3,7 @@ rm(list=ls())
 library(raster)
 library(ncdf4)
 
-netcdf.file <- "../ERA_Download/era20c_z500.nc"
+netcdf.file <- "../SST/ersstv5.nc"
 treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
 # Get a list of the stupid variables to choose from and confirm that the time 
@@ -21,7 +21,8 @@ tustr <- strsplit(tunits$value, " ")
 
 nc_close(nc)
 
-dat <- brick(netcdf.file, varname=var.name) #adjusted for selection above
+dat <- rotate(brick(netcdf.file, varname=var.name)) #adjusted for selection above
+#rotate converts lons from 0-360 to -180-180
 
 trDat <- read.table(treering.file, header = TRUE)
 
@@ -47,7 +48,8 @@ trDat <-trDat[which(trDat$year >= F_yr-1 & trDat$year<= L_yr),]
 ## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
 
 #ext <- extent(60, 200.25, -80.25, -4.50)
-ext <- extent(0, 180, -80, -4)
+ext <- extent(-180, 180, -80, -4)
+
 #Spatial crop using extent
 datC <- crop(dat, ext)
 
@@ -113,7 +115,7 @@ datMs <- subset(datMs, c(3,4,1,2)) #reorder because they are setup as MAM, JJA, 
 ## There has been very little work done to this. 
 #Better to select based on quantiles:
 ## Smallest x% years, Largest x% years
-quants <- quantile(trDat$ars, probs = c(0.10, 0.90))
+quants <- quantile(trDat$ars, probs = c(0.15, 0.85))
 lq_yrs <- trDat$year[which(trDat$ars<quants[1])]
 uq_yrs <- trDat$year[which(trDat$ars>quants[2])]
 
@@ -130,8 +132,8 @@ names(dat.l) <- unique(substring(names(tr.l), 7))
 dat.l <- subset(dat.l, c("SON", "DJF", "MAM", "JJA"))
 
 
-com.h <- dat.h - datMs #composite difference
-com.l <- dat.l - datMs #composite difference
+com.h <- dat.h - datMs #composite difference to get anomalies
+com.l <- dat.l - datMs #composite difference to get anomalies
 
 ########### Plotting the composites ###########
 
@@ -148,17 +150,28 @@ library(rasterVis)
 library(gridExtra)
 
 title.txt <- basename(netcdf.file) #b/c I am losing track of what's what;
-#add wide or narrow!
-             
-# Make a plot!
- levelplot(com.h, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste(title.txt, F_yr, "-", L_yr),
+product <- unlist(strsplit (netcdf.file, "[/]"))[2]
+
+# Make two plots and save them in directory called "Composites"
+#Can you make a loop to do this?  I struggled and gave up.
+pdf(paste("../Composites/", product, "_", title.txt, "_", F_yr, "_", L_yr, "L", ".pdf", sep=""), width=6, height=4.3, pointsize=7, family="Helvetica")
+ levelplot(com.l, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste(title.txt, F_yr, "-", L_yr),
           colorkey=list(space="right"),
           par.settings = list(layout.heights=list(xlab.key.padding=1),
                               strip.background=list(col="lightgrey")
           ), par.strip.text = list(font="bold")) + 
   layer(sp.lines(coast_shapefile))
-
+ dev.off()
  
+ pdf(paste("../Composites/", product, "_", title.txt, "_", F_yr, "_", L_yr, "H",".pdf", sep=""), width=6, height=4.3, pointsize=7, family="Helvetica")
+ levelplot(com.h, layout=c(2,2), col.regions = col5, pretty=TRUE, main= paste(title.txt, F_yr, "-", L_yr),
+           colorkey=list(space="right"),
+           par.settings = list(layout.heights=list(xlab.key.padding=1),
+                               strip.background=list(col="lightgrey")
+           ), par.strip.text = list(font="bold")) + 
+   layer(sp.lines(coast_shapefile))
+ dev.off() 
+
 ################################################################### 
 #### Correlation with tree ring data ####
 
