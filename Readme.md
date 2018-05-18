@@ -1,8 +1,11 @@
 # ERA_analysis
 
-Tools to compare a time series (here tree ring chronology) with climate field data (netCDF), including correlation and compositing.
+Tools to compare a time series (here tree ring chronology) with climate field data (netCDF), including correlation, compositing, extracting a time series from gridbox.
 
 ## Current Tasks
+
+*Needs*
+Plotting of some anomalies has an asymetric range about 0 resulting in plots with colors at "0" (where there should be white). Not sure if we can remedy this. Ideas?
 
 Extract functions from universalNetCDF to:
 1. seasNm.R - Seasonalize gridded climate data (netCDF)
@@ -15,7 +18,12 @@ Extract functions from universalNetCDF to:
   - create more flexibility for different combinations e.g.:
       * Warm vs. Cool season
       * Two-month
-      * Specific start and end months
+      * Specific start and end months --YES!  The ice data are all over the place in terms of season:
+      ice accumulation - same year, J-Dec
+      seas salts - same year, MJJA-ish
+      isotopes - same year, NDJFM-ish (and no Shulman shift)
+      MSA - same year, DJFM (no Shulman shift)
+      The trick will be to have some clear language!!!
 
 
 2. fullCorr.R - Correlate seasonal climate grids with proxy time series (indices)
@@ -31,21 +39,29 @@ Extract functions from universalNetCDF to:
   - Tree rings added
   - This function may not be feasible
 
-4. compCalc.R - Create composites of climate data based on user-defined quantile of tree ring indices
+4. compCalc.R - Create composites of climate data based on user-defined quantile of proxy time series
 
   *Needs*
   - Error message for uneven seasons
+  - What is the extra argument on line 115 for com.l ("5")???
+  - Let's have a report of the years that were chosen and # for compositing
 
 5. ncdfRead.R - imports netcdf file, allows operator to choose variable in the console. Extracts the variable data and determines whether the naming system is "months" or "days and names layers appropriately. Lastly, rotates coordinate system of raster if longitude is not -180 - 180.
  
   *Needs*
   - Tested
   - Clean-up of time units
-    * Only have to worry about months and days? or are there other variants?
-  - Runs a little slower than Shawn would like because of rotate, but it may not be avoidable.
+    * Only have to worry about months and days? or are there other variants? (so far I have only had a problem with "months since...")
+  - Runs a little slower than Shawn would like because of rotate, but it may not be avoidable. (Yes, not sure how to avoid, could be temporally cropped first but can't be cropped by spatial extent until units are correct - unless you crop by latitude which is fine)
     * Combine cropping by extent for this portion?
   - Rotate questions
-    * Will values always be < 181?
+    * Will values always be < 181?: (I notice that all climate data sets I looked at had 0-359 for lon.  It seems that the if/else is not working because of the label calling for longitude is sometimes "lon", sometimes "longitude" etc, I replaced with getvar, but still not working!
+    
+5. ExtractTS
+    *Needs*
+    --Nothing going yet, idea is to interactively select grid box from plots to extract a mean time series.
+    identifyRaster
+    extract (raster, coords)
 
 Build a package called SpatCorr
 
