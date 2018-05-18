@@ -1,32 +1,38 @@
 #setwd("C:/Users/S/Dropbox/ATSE Thesis Workspace/ERA_Download")
 rm(list=ls())
+
+### Installing Shawn's fancy package
+library(devtools)
+devtools::install_github("ahessl/ERA_analysis/SpatCor")
+
 library(raster)
 library(ncdf4)
 library(SpatCor)
 
-netcdf.file <- "../SST/ersstv5.nc"
+netcdf.file <- "../NOAA20thc/hgt500.nc"
 treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
 ## New function....gets rid of the messing with the file here.
 ## Also has interactive functionality!!!
-dat <- ncdfRead(netcdf.file)
+#dat <- ncdfRead(netcdf.file) #not rotatiing!!!
+
 
 # Get a list of the stupid variables to choose from and confirm that the time 
 #origin and units are appropriate......
-#nc <- nc_open(netcdf.file)
+nc <- nc_open(netcdf.file)
 
 #select the variable
-#print(names(nc[['var']]))
-#var.name <- names(nc[['var']])[1]
+print(names(nc[['var']]))
+var.name <- names(nc[['var']])[1]
 
-#t <- ncvar_get(nc, "time")
-#tunits <- ncatt_get(nc, "time", "units")
-#print(tunits)
-#tustr <- strsplit(tunits$value, " ")
+t <- ncvar_get(nc, "time")
+tunits <- ncatt_get(nc, "time", "units")
+print(tunits)
+tustr <- strsplit(tunits$value, " ")
 
-#nc_close(nc)
+nc_close(nc)
 
-#dat <- rotate(brick(netcdf.file, varname=var.name)) #adjusted for selection above
+dat <- rotate(brick(netcdf.file, varname=var.name)) #adjusted for selection above
 #rotate converts lons from 0-360 to -180-180
 
 
@@ -54,8 +60,8 @@ trDat <-trDat[which(trDat$year >= F_yr-1 & trDat$year<= L_yr),]
 ## Creating this way allows for other created rasters to recognize as an extent with 
 ## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
 
-ext <- extent(60, 200.25, -80.25, -4.50)
-#ext <- extent(-180, 180, -80, -4)
+#ext <- extent(60, 200.25, -80.25, -4.50)
+ext <- extent(-180, 180, -80, 0)
 
 #Spatial crop using extent
 datC <- crop(dat, ext)
