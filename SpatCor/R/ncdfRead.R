@@ -9,7 +9,7 @@ ncdfRead <- function(ncdf){
   nc <- ncdf4::nc_open(ncdf)
   
   #select the variable
-  idx <- devtools::menu(names(nc[['var']]), "What variable would you like?")
+  idx <- menu(names(nc[['var']]), "What variable would you like?")
   var.name <<- names(nc[['var']])[idx]
   
   t <- ncdf4::ncvar_get(nc, "time")
