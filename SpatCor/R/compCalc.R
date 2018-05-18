@@ -15,7 +15,13 @@ compCalc <- function(trData, quantile, fullMean, up){
     datMs <- raster::stackApply(fullMean,substring(names(fullMean), 7), mean) #create seasonal mean of entire dataset
     names(datMs) <- unique(substring(names(fullMean), 7)) #give them meaningful names
     datMs <- raster::subset(datMs, c("SON", "DJF", "MAM", "JJA")) #reorder because they are setup as MAM, JJA, SON, DJF
-      
+    crMn <- function(fullMean, q_yrs){
+      tr.c <- fullMean[[which(as.numeric(substr(names(fullMean), 2, 5)) %in% q_yrs) ]]
+      dat.c <- raster::stackApply(tr.c, substring(names(tr.c), 7), mean) #seasonal mean for wide years
+      names(dat.c) <- unique(substring(names(tr.c), 7)) #meaningful names
+      dat.c <- raster::subset(dat.c, c("SON", "DJF", "MAM", "JJA")) #keeps order correct
+      com.c <- dat.c - datMs
+    }
     quants <- quantile(trData, probs = quantile)
     if(up == "b"){
       uq_yrs <- trDat$year[which(trData > quants[2])]
@@ -26,39 +32,31 @@ compCalc <- function(trData, quantile, fullMean, up){
         mxl <- max(sapply(bth, length))
         Quantiles <<- setNames(data.frame(sapply(bth, function(x){c(x, rep(NA, mxl - length(x)))})), 
                               c("Upper.Quant", "Lower.Quant"))
-      }
-      tr.u <- fullMean[[which(as.numeric(substr(names(fullMean), 2, 5)) %in% uq_yrs) ]]
-      dat.u <- raster::stackApply(tr.u, substring(names(tr.u), 7), mean) #seasonal mean for wide years
-      names(dat.u) <- unique(substring(names(tr.u), 7)) #meaningful names
-      dat.u <- raster::subset(dat.u, c("SON", "DJF", "MAM", "JJA")) #keeps order correct
-      com.u <<- dat.u - datMs #composite difference
-      
-      tr.l <- fullMean[[which(as.numeric(substr(names(fullMean), 2, 5)) %in% lq_yrs) ]]
-      dat.l <- raster::stackApply(tr.l, substring(names(tr.l), 7), mean) #seasonal mean for wide years
-      names(dat.l) <- unique(substring(names(tr.l), 7)) #meaningful names
-      dat.l <- raster::subset(dat.l, c("SON", "DJF", "MAM", "JJA")) #keeps order correct
-      com.l <<- dat.l - datMs #composite difference
-      return()
-    }else{
-    if(up == "u"){
-      q_yrs <- trDat$year[which(trData > quants)]
-      a <- menu(c("Yes", "No"), "Would you to store the upper quantile years?")
-      if (a == 1){
-        UpperQuart <<- data.frame(Upper.Quart = q_yrs)
+        tr.u <<- crMn(fullMean, uq_yrs)
+        tr.l <<- crMn(fullMean, lq_yrs)
+        return()
       }else{
-        if(up == "l"){
-          q_yrs <- trDat$year[which(trData < quants)]
-          a <- menu(c("Yes", "No"), "Would you to store the lower quantile years?")
-          if (a == 1){
+        tr.u <<- crMn(fullMean, uq_yrs)
+        tr.l <<- crMn(fullMean, lq_yrs)
+      }
+      if(up == "u"){
+        q_yrs <- trDat$year[which(trData > quants)]
+        a <- menu(c("Yes", "No"), "Would you to store the upper quantile years?")
+        if (a == 1){
+        UpperQuart <<- data.frame(Upper.Quart = q_yrs)
+        com.h <<- crMn(fullMean, q_yrs)
+        return()
+        }else{
+          if(up == "l"){
+            q_yrs <- trDat$year[which(trData < quants)]
+            a <- menu(c("Yes", "No"), "Would you to store the lower quantile years?")
+            if (a == 1){
             LowerQuart <<- data.frame(Upper.Quart = q_yrs)
+            crMn(fullMean, q_yrs)
+            com.l <<- crMn(fullMean, q_yrs)
+            return()
         }
       }
-      tr.c <- fullMean[[which(as.numeric(substr(names(fullMean), 2, 5)) %in% q_yrs) ]]
-      dat.c <- raster::stackApply(tr.c, substring(names(tr.c), 7), mean) #seasonal mean for wide years
-      names(dat.c) <- unique(substring(names(tr.c), 7)) #meaningful names
-      dat.c <- raster::subset(dat.c, c("SON", "DJF", "MAM", "JJA")) #keeps order correct
-      com.c <- dat.c - datMs #composite difference
-      return(com.c)
       }
     }
     }
