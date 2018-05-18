@@ -14,7 +14,9 @@ treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
 ## New function....gets rid of the messing with the file here.
 ## Also has interactive functionality!!!
-#dat <- ncdfRead(netcdf.file) #not rotatiing!!!
+
+# Should be rotating properly now - I hope.
+dat <- ncdfRead(netcdf.file) #not rotatiing!!!
 
 
 # Get a list of the stupid variables to choose from and confirm that the time 
@@ -111,8 +113,14 @@ datM <- seasNm(datC, "s", 0, mean)
 ## Reproduce error codes: 
 ##    com.h <- compCalc(trDat$mr_ars, "upper", datM)
 
-com.h <- compCalc(trDat$ars, .85, datM)
-com.l <- compCalc(trDat$ars, .15, datM, 5)
+## Arguments for compCalc: treeData (tree ring indices), quantile(numeric decimal 0-1), fullMean(full season mean), 
+## quantile level - upper or lower (for now) designated by "u" or "l"
+
+compCalc(trDat$ars, .85, datM, "u")
+compCalc(trDat$ars, .15, datM, "l")
+
+## Not working yet, still debugging.
+#compCalc(trDat$ars, quantile = c(.15, .85), "b")
 
 ## SC: This needs cleaned a bit more.
 #datMs <- stackApply(datM,substring(names(datM), 7), mean) #create seasonal mean of entire dataset
