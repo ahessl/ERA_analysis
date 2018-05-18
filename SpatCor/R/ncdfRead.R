@@ -15,7 +15,11 @@ ncdfRead <- function(ncdf){
   t <- ncdf4::ncvar_get(nc, "time")
   tunits <- ncdf4::ncatt_get(nc, "time", "units")
   tustr <- strsplit(tunits$value, " ")[[1]][1]
-  if (max(nc$dim$longitude$vals) < 181){
+  
+  lon <- ncvar_get(nc, "lon")
+  mlon <- max(lon)
+  
+  if (mlon < 181){
     dat <- raster::brick(ncdf, varname = var.name)
   }else{
     dat <- raster::rotate(raster::brick(ncdf, varname=var.name)) #adjusted for selection above
