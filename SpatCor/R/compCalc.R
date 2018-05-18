@@ -19,7 +19,6 @@ compCalc <- function(trData, quantile, fullMean, up = "up"){
     quants <- quantile(trData, probs = quantile)
     if(up == "up"){
       uq_yrs <- trDat$year[which(trData > quants)]
-      message(get(uq_yrs))###HELP!
       tr.c <- fullMean[[which(as.numeric(substr(names(fullMean), 2, 5)) %in% uq_yrs) ]]
       
       dat.c <- raster::stackApply(tr.c, substring(names(tr.c), 7), mean) #seasonal mean for wide years

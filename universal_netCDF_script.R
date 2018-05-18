@@ -42,9 +42,10 @@ tunits <- ncatt_get(nc, "time", "units")
 print(tunits)
 tustr <- strsplit(tunits$value, " ")
 
-#extract a single dimension and print first few values
+#extract lon dimension to check its range
 lon <- ncvar_get(nc, "lon")
 mlon <- max(lon)
+print(mlon)
 
 nc_close(nc)
 
@@ -76,8 +77,8 @@ trDat <- read.table(treering.file, header = TRUE)
 
 
 ## Decide start year and end year based on target and tree ring data
-#F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
-F_yr <- 1959
+F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
+#F_yr <- 1959
 #L_yr <- 1998
 L_yr <- as.numeric(max(trDat$year))
 
