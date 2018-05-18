@@ -17,7 +17,7 @@ compCalc <- function(trData, quantile, fullMean, up = "u"){
     datMs <- raster::subset(datMs, c("SON", "DJF", "MAM", "JJA")) #reorder because they are setup as MAM, JJA, SON, DJF
       
     quants <- quantile(trData, probs = quantile)
-    if(up == "up"){
+    if(up == "u"){
       uq_yrs <- trDat$year[which(trData > quants)]
       a <- devtools::menu(c("Yes", "No"), "Would you to store the upper quantile data?")
       if (a == 1){
