@@ -20,7 +20,7 @@ library(SpatCor)
 
 #Name the files for convenience:
 
-netcdf.file <- "../SST/ersstv5.nc"
+netcdf.file <- "../NOAA20thc/hgt500.nc"
 treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
 # If the netcdf file has one layer, varname isn't required. 
@@ -41,6 +41,10 @@ t <- ncvar_get(nc, "time")
 tunits <- ncatt_get(nc, "time", "units")
 print(tunits)
 tustr <- strsplit(tunits$value, " ")
+
+#extract a single dimension and print first few values
+lon <- ncvar_get(nc, "lon")
+mlon <- max(lon)
 
 nc_close(nc)
 
