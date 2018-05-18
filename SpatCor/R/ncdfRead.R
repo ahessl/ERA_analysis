@@ -16,8 +16,7 @@ ncdfRead <- function(ncdf){
   tunits <- ncdf4::ncatt_get(nc, "time", "units")
   tustr <- strsplit(tunits$value, " ")[[1]][1]
   
-  lon <- ncvar_get(nc, "lon")
-  mlon <- max(lon)
+  mlon <- max(ncvar_get(nc, names(nc$dim[which(substr(names(nc$dim), 1, 3) %in% "lon")])))
   
   if (mlon < 181){
     dat <- raster::brick(ncdf, varname = var.name)
