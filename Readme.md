@@ -59,9 +59,11 @@ Extract functions from universalNetCDF to:
     
 5. ExtractTS
     *Needs*
-    --Nothing going yet, idea is to interactively select grid box from plots to extract a mean time series.
-    identifyRaster
-    extract (raster, coords)
+    --Nothing going yet, idea is to interactively select grid box from plots to extract a mean time series of months that can be sent to treeclim for monthly analysis.
+    identifyRaster to get the extent
+    gbox <- extent (140, 150, -42, -40)
+    gbox_m <- extract(raster, gbox, fun="mean", method="simple")
+
 
 Build a package called SpatCorr
 
