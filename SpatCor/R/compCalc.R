@@ -21,7 +21,7 @@ compCalc <- function(trData, quantile, fullMean, up = "u"){
       uq_yrs <- trDat$year[which(trData > quants)]
       a <- menu(c("Yes", "No"), "Would you to store the upper quantile data?")
       if (a == 1){
-        assign(UpperYears, uq_yrs, enviro=.GlobalEnv)
+        UpperYears <<- data.frame(Upper.Quart = uq_yrs)
       }
       tr.c <- fullMean[[which(as.numeric(substr(names(fullMean), 2, 5)) %in% uq_yrs) ]]
       
