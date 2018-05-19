@@ -114,13 +114,11 @@ datM <- seasNm(datC, "s", 0, mean)
 ##    com.h <- compCalc(trDat$mr_ars, "upper", datM)
 
 ## Arguments for compCalc: treeData (tree ring indices), quantile(numeric decimal 0-1), fullMean(full season mean), 
-## quantile level - upper or lower (for now) designated by "u" or "l"
+## quantile level - upper, lower, or both designated by "u" or "l"
 
 compCalc(trDat$ars, .85, datM, "u")
 compCalc(trDat$ars, .15, datM, "l")
-
-## Not working yet, still debugging.
-#compCalc(trDat$ars, quantile = c(.15, .85), "b")
+compCalc(trDat$ars, c(.15, .85), datM, "b")
 
 ## SC: This needs cleaned a bit more.
 #datMs <- stackApply(datM,substring(names(datM), 7), mean) #create seasonal mean of entire dataset
