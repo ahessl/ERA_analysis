@@ -22,31 +22,65 @@ compCalc <- function(trData, quantile, fullMean, up){
       dat.c <- raster::subset(dat.c, c("SON", "DJF", "MAM", "JJA")) #keeps order correct
       com.c <- dat.c - datMs
     }
+    sumStatb <- function(uyrs, lyrs, fllMn){
+      t1 <- list(u=list(), l=list(), m=list())
+      for(i in unique(substr(names(fllMn), 7,9))){
+        t1$u[[i]]<-paste(length(names(fllMn[[which(as.numeric(substr(names(fllMn), 2, 5)) %in% uq_yrs & 
+                                                    substr(names(fllMn),7,9) %in% i)]])), i, sep=" ")
+        t1$l[[i]]<-paste(length(names(fllMn[[which(as.numeric(substr(names(fllMn), 2, 5)) %in% lq_yrs & 
+                                                    substr(names(fllMn),7,9) %in% i)]])), i, sep=" ")
+        t1$m[[i]]<-paste(length(names(fllMn[[which(substr(names(fllMn),7,9) %in% i)]])), i, sep=" ")
+      }
+      
+      Stats<- 
+        list(Upper = uq_yrs, Lower = lq_yrs,Mean = paste(min(as.numeric(substr(names(fllMn), 2, 5))), "-",
+                          max(as.numeric(substr(names(fllMn), 2, 5) )), sep = " "),
+             UpperSsn = paste(t1$u), LowerSsn = paste(t1$l), MeanSsn = paste(t1$m)
+        )
+      return(Stats)
+    }
+    sumStat <- function(qyrs, fllMn){
+      t1 <- list(q=list(), m=list())
+      for(i in unique(substr(names(fllMn), 7,9))){
+        t1$q[[i]]<-paste(length(names(fllMn[[which(as.numeric(substr(names(fllMn), 2, 5)) %in% qyrs & 
+                                                     substr(names(fllMn),7,9) %in% i)]])), i, sep=" ")
+        t1$m[[i]]<-paste(length(names(fllMn[[which(substr(names(fllMn),7,9) %in% i)]])), i, sep=" ")
+      }
+      
+      Stats<- 
+        list(QuantileYrs = qyrs, Mean = paste(min(as.numeric(substr(names(fllMn), 2, 5))), "-",
+                                                         max(as.numeric(substr(names(fllMn), 2, 5) )), sep = " "),
+              QuantSsn = paste(t1$q), MeanSsn = paste(t1$m)
+        )
+      return(Stats)
+    }
     
     if(up == "b"){
       qs <- quantile
       quant <- quantile(trData, probs = qs)
       uq_yrs <- trDat$year[which(trData > quant[2])]
       lq_yrs <- trDat$year[which(trData < quant[1])]
-      a <- menu(c("Yes", "No"), "Would you to store the quantile years?")
+      a <- menu(c("Yes", "No"), title = "Would you to store composite summary?")
       if (a == 1){
-        bth <- list(uq_yrs, lq_yrs)
-        mxl <- max(sapply(bth, length))
-        Quantiles <<- setNames(data.frame(sapply(bth, function(x){c(x, rep(NA, mxl - length(x)))})), 
-                              c("Upper.Quant", "Lower.Quant"))
-        com.u <<- crMn(fullMean, qyrs = uq_yrs)
+        #bth <- list(uq_yrs, lq_yrs)
+        #mxl <- max(sapply(bth, length))
+        #Quantiles <<- setNames(data.frame(sapply(bth, function(x){c(x, rep(NA, mxl - length(x)))})), 
+                              #c("Upper.Quant", "Lower.Quant"))
+        ComSummary <<- sumStatb(uq_yrs, lq_yrs, datM) 
+        com.h <<- crMn(fullMean, qyrs = uq_yrs)
         com.l <<- crMn(fullMean, qyrs = lq_yrs)
       }else{
-        com.u <<- crMn(fullMean, uq_yrs)
+        com.h <<- crMn(fullMean, uq_yrs)
         com.l <<- crMn(fullMean, lq_yrs)
       }
     }else{
       quants <- quantile(trData, probs = quantile)
       if(up == "u"){
         q_yrs <- trDat$year[which(trData > quants)]
-        a <- menu(c("Yes", "No"), "Would you to store the upper quantile years?")
+        a <- menu(c("Yes", "No"), title = "Would you to store the composite summary?")
         if (a == 1){
-          UpperQuart <<- data.frame(Upper.Quart = q_yrs)
+          #UpperQuant <<- data.frame(Upper.Quant = q_yrs)
+          ComSummary <<- sumStat(q_yrs, datM)
           com.h <<- crMn(fullMean, q_yrs)
         }else{
           com.h <<- crMn(fullMean, q_yrs)
@@ -54,15 +88,16 @@ compCalc <- function(trData, quantile, fullMean, up){
       }else{
         if(up == "l"){
           q_yrs <- trDat$year[which(trData < quants)]
-          a <- menu(c("Yes", "No"), "Would you to store the lower quantile years?")
+          a <- menu(c("Yes", "No"), title = "Would you to store the composite summary?")
           if (a == 1){
-            LowerQuart <<- data.frame(Upper.Quart = q_yrs)
+            #LowerQuant <<- data.frame(Upper.Quant = q_yrs)
+            ComSummary <<- sumStat(q_yrs, datM)
             com.l <<- crMn(fullMean, q_yrs)
           }else{
             com.l <<- crMn(fullMean, q_yrs)
           }
         }else{
-        message("Please use l for lower, u for upper, or b for both")
+        stop("Please use l for lower, u for upper, or b for both")
         }
       }
     }
