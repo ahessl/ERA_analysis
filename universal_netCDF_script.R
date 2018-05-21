@@ -17,15 +17,12 @@ devtools::install_github("ahessl/ERA_analysis/SpatCor")
 library(ncdf4)
 library(raster)
 library(SpatCor)
+library(dplR)
 
 #Name the files for convenience:
 
 netcdf.file <- "../NOAA20thc/hgt500.nc"
 treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
-
-# If the netcdf file has one layer, varname isn't required. 
-# If it has more than one, the first will be loaded and give names for all. Use varname="" and 
-# put the variable name abbreviation in "" to load it.
 
 # Get a list of the variables to choose from and confirm that the time 
 #origin and units are appropriate......
@@ -61,29 +58,37 @@ if (unlist(tustr)[1]=="months") {
       names(dat) <- names(dat)
     }
 ## set spatial extent for area interested in. Longitude min - max then latitude min - max
-## Creating this way allows for other created rasters to recognize as an extent with 
-## the proper spatial extent, otherwise have to set xmin, xmax, ymin, ymax individually.
-
 #ext <- extent(144, 149, -44, -40) #awap micro extent
 #ext <- extent(0, 180, -80, -4)
 ext <- extent(-180, 180, -80, 0)
-
-
-#Spatial crop using extent
-datC <- crop(dat, ext)
+datC <- crop(dat, ext) #Spatial crop using extent
 
 ## Tree ring data
-trDat <- read.table(treering.file, header = TRUE)
+trDat_tab <- read.table(treering.file, header = TRUE)
 
 
 ## Decide start year and end year based on target and tree ring data
 F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
 #F_yr <- 1959
 #L_yr <- 1998
-L_yr <- as.numeric(max(trDat$year))
+L_yr <- as.numeric(max(trDat_tab$year))
 
-# Subset rasters based on the tree ring data. Won't exclude partial seasons.
-# second subset for that.
+#Subset Tree Ring data to F_yr and L_Yr
+trDat_raw <- subset(trDat_tab, year>=F_yr & year<=L_yr )
+
+#Detrend Tree Ring Index Linear or FD
+tr_i <- trDat_raw$ars
+## First Differences Method
+#r <- diff(tr_i), 1))
+# Linear Model Method
+# lm_x <- seq(1:length(tr_i))
+# r <- resid(lm(tr_i ~ lm_x))
+#Difference from spline
+r <- tr_i - ffcsaps(trDat_raw$ars, trDat_raw$year, nyrs=30) #subtract detrended series from original series
+trDat <- as.data.frame(cbind(year=trDat_raw$year, ars=r)) #put dataframe back together
+
+
+# Subset rasters based on the F_yr, L_yr
 # substr(names(dat)....) reads raster name and selects the characters (2 through 5) 
 # in the names (time in this case) to extract years and compares to values in tree ring file
 datC <- datC[[which(as.numeric(substr(names(dat), 2, 5)) >= F_yr & 
@@ -93,7 +98,6 @@ datC <- datC[[-c(1:2, (nlayers(datC)-3):nlayers(datC))]] #removes first incomple
 
 ### Use seasNm from Shawn - data, hemisphere ("s", "n"), lag (0,1), function (e.g. sum, mean)
 datM <- seasNm(datC, "s", 0, mean)
-
 
 # Subset season, replace NAs with -9999 for correlation/regression.
 # Can run linear model extracting residuals or first differences.
