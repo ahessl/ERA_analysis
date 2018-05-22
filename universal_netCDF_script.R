@@ -24,6 +24,10 @@ library(dplR)
 netcdf.file <- "../NOAA20thc/hgt500.nc"
 treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 
+# Bring in netcdf file via SpatCor
+dat <- ncdfRead(netcdf.file)
+
+
 # Get a list of the variables to choose from and confirm that the time 
 #origin and units are appropriate......
 nc <- nc_open(netcdf.file)
@@ -59,8 +63,8 @@ if (unlist(tustr)[1]=="months") {
     }
 ## set spatial extent for area interested in. Longitude min - max then latitude min - max
 #ext <- extent(144, 149, -44, -40) #awap micro extent
-#ext <- extent(0, 180, -80, -4)
-ext <- extent(-180, 180, -80, 0)
+ext <- extent(0, 180, -80, -4)
+#ext <- extent(-180, 180, -80, 0)
 datC <- crop(dat, ext) #Spatial crop using extent
 
 ## Tree ring data
@@ -128,11 +132,11 @@ temp <- setExtent(raster(nrow = nrow(datM), ncol = ncol(datM)),ext)
 
 ## Correlation, masking all done in one go. Plot ready after this.
 
-fullCorr <- function(x, y){ # x=climate data, y=column name from trDat in ""
-  rng <- range(as.numeric(substr(grep(
-    unique(substr(as.character(colnames(x)), 7, 9)), 
-    colnames(x), value=T),2, 5)))
+fullCorr <- function(r, y){ # x=climate data, y=column name from trDat in ""
+  rng <- c(max(range(as.numeric(substr(colnames(MAM),2, 5)))[1], range((trDat$year))[1]),
+           min(range(as.numeric(substr(colnames(MAM),2, 5)))[2], range((trDat$year))[2]))
   trYr <-trDat[which(trDat$year >= rng[1] & trDat$year<= rng[2]),]
+  x <- r[,which(substring(colnames(r), 2, 5) >= rng[1] & substring(colnames(r), 2, 5) <= rng[2])]
   for(i in 1:dim(x)[1]){
     Cor[i] <- cor(x=x[i,], y = trYr[,y], method = 'pearson') ## create correlation based on tree ring
     CorT[i] <- cor.test(x=x[i,], y = trYr[,y], method = 'pearson')$p.value ## p values used to create the cropped confidence intervals
@@ -145,10 +149,11 @@ fullCorr <- function(x, y){ # x=climate data, y=column name from trDat in ""
 
 # part of the SpatCor package
 # Working on how to integrate the previous 3 things...
-DJF_c <- fullCorr(DJF, "ars")
-MAM_c <- fullCorr(MAM, "ars")
-JJA_c <- fullCorr(JJA, "ars")
-SON_c <- fullCorr(SON, "ars")
+SON_c <- fullCorr(SON, trDat$ars, trDat$year)
+DJF_c <- fullCorr(DJF, trDat$ars, trDat$year)
+MAM_c <- fullCorr(MAM, trDat$ars, trDat$year)
+JJA_c <- fullCorr(JJA, trDat$ars, trDat$year)
+
 
 rm(SON, DJF, JJA, MAM, trDat, datM) 
 
