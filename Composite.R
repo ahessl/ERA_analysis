@@ -73,8 +73,9 @@ datC <- datC[[which(as.numeric(substr(names(datC), 2, 5)) >= F_yr &
                       as.numeric(substr(names(datC), 2, 5)) <= L_yr)]]
 datC <- datC[[-c(1:2, (nlayers(datC)-3):nlayers(datC))]] #removes first incomplete season JF and last SON from year
 
-#library(SpatCor)
-datM <- seasNm(datC, "s", 0, mean)
+
+### data, SchulmanShift TRUE or FALSE for seasonal offset (SH), lag (0,1), function (e.g. sum, mean)
+datM <- seasNm(datC, TRUE, 0, mean)
 ##### Seasonal Indexing ######
 #library(chron)
 

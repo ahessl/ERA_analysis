@@ -100,8 +100,8 @@ datC <- datC[[which(as.numeric(substr(names(dat), 2, 5)) >= F_yr &
 datC <- datC[[-c(1:2, (nlayers(datC)-3):nlayers(datC))]] #removes first incomplete season JF and last SON from year
 
 
-### Use seasNm from Shawn - data, hemisphere ("s", "n"), lag (0,1), function (e.g. sum, mean)
-datM <- seasNm(datC, "s", 0, mean)
+### Use seasNm from Shawn - data, SchulmanShift TRUE or FALSE for seasonal offset (SH), lag (0,1), function (e.g. sum, mean)
+datM <- seasNm(datC, F, 0, mean)
 
 # Subset season, replace NAs with -9999 for correlation/regression.
 # Can run linear model extracting residuals or first differences.
