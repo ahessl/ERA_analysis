@@ -39,18 +39,18 @@ seasNm <- function(climDat, SchulmanShift = FALSE, lg = 0, FUN){
       }else{
         if(lg ==0 ){
           yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering 
-                              as.POSIXlt( d )$year + 
-                              1*(as.POSIXlt( d )$mon>10) ,
-                            c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
-                              1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
-                            , sep="-")
+                                as.POSIXlt( d )$year - 
+                                1*(as.POSIXlt( d )$mon<2) ,
+                              c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
+                                1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
+                              , sep="-")
         datM <- stackApply(climDat, yr_season, match.fun(FUN))
         names(datM) <- unique(yr_season)
         return(datM)
         }else{
           yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering 
-                                as.POSIXlt( d )$year + 
-                                1*(as.POSIXlt( d )$mon>10) ,   # offset needed for growing season in SH
+                                as.POSIXlt( d )$year - 
+                                1*(as.POSIXlt( d )$mon<2) ,
                               c('DJF', 'MAM', 'JJA', 'SON')[          # indexing from 0-based-mon
                                 1+((as.POSIXlt(d)$mon+1) %/% 3)%%4] 
                               , sep="-")
