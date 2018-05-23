@@ -9,12 +9,18 @@ Tools to compare a time series (here tree ring chronology) with climate field da
 
 ## Extract functions from universalNetCDF to:
 ### 1. seasNm.R - Seasonalize gridded climate data (netCDF)
+  - Four arguments passed to seasNm
+    * climDat: climate data
+    * SchulmanShift: adjust for seasonal offset in SH. Default is FALSE, calendar year and seasons match
+    * lg: option of no lag and one year lag for now.
+    * FUN: a function to apply during the compiling of the final product. Accepts regular functions (e.g. mean, sum)
+  - created defaults for SchulmanShift and lg for ease of use.
+    * SchulmanShift: default FALSE
+    * lg: default no lag 0
 
   #### *Needs*
-  - create defaults for hem, lg, FUN for quick processing
-    * hem: default NH
-    * lg: default no lag 0
-    * FUN: default....mean?
+  - Argument defaults  
+    * FUN: mean?
   - create more flexibility for different combinations e.g.:
       * Warm vs. Cool season
       * Two-month
