@@ -157,6 +157,47 @@ seasNm <- function(climDat, SchulmanShift = FALSE, lg = 0, FUN){
 datM <- seasNm(datC, F, 0, mean)
 
 
+###### TEST CODE - DO NOT USE YET ######
+
+## SC: This code has 3 menus: What month the year ends; How many months included; and apply Schulman
+## SC: I have tested it with my data - needs looked at by other eyes. Will also require cleaning.
+
+library(dplyr)
+yr_mo_dy <- substr(names(datC), 2, 11)
+d <- as.Date(gsub(".", '/', yr_mo_dy, fixed = T)) #fix the format by replacing "." with "/"
+
+mo <- menu(month.name, title = "What month does the year end?")
+
+season <- switch(menu(c(2,3,4,6), title = "How many months in each season?"), 2,3,4,6)
+s.s <- menu(c("No", "Yes"), title = "Should a Schulman shift be applied?") - 1
+
+mo <- ifelse (mo == 12, mo - 1, mo)
+
+# Dataframe of first letter of the month names, season (chosen above), and the POSIXlt value for 
+# season name generation and indexing later
+indx <- data.frame(cbind
+                   (MonName = substr(months(seq.Date(as.Date(paste("1999", mo+1, "01", sep = "/")),, "month", length = 12)), 1,1),
+                     ssn = rep(1:(12/season), each = season),
+                     POSmon = as.POSIXlt(seq.Date(as.Date(paste("1999", mo+1, "01", sep = "/")),, "month", 
+                                                  length = 12))$mon))
+
+# Only way I could figure out how to generate a list of seasonal names that could change based on previous parameters.
+ssn.nms <- indx %>% group_by(ssn) %>% summarize (ssnNm = paste(MonName, collapse = ""))
+
+yr_season <- paste( 1900 + # this is the base year for POSIXlt year numbering 
+                      as.POSIXlt( d )$year - 
+                      s.s*(as.POSIXlt( d )$mon < mo) ,   # offset applied with Schulman shift question
+                    ssn.nms[[2]][          # indexing from created dataframe and name list
+                      ifelse(a<-match(as.POSIXlt(d)$mon, indx$POSmon), indx$ssn[a], NA)
+                      ]
+                    , sep="-")
+
+datM <- stackApply(datC, yr_season, mean) #raster with mean for each season
+names(datM) <- unique(yr_season)
+
+###### END TEST CODE ######
+
+
 # Subset season, replace NAs with -9999 for correlation/regression.
 # Can run linear model extracting residuals or first differences.
 
