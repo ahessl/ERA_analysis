@@ -41,9 +41,10 @@ Tools to compare a time series (here tree ring chronology) with climate field da
 ### 3. detrCL.R - Detrend both seasonalized cliamte data and tree ring time series to remove longterm trends
 
  #### *Needs*
-  - default for mod; should be no detrending
+  - default for mod???; should be no detrending
   - Tree rings added
   - This function may not be feasible
+  - Detrending is computationally slow - esp ffcsaps (splines)
 
 ### 4. compCalc.R - Create composites of climate data based on user-defined quantile of proxy time series
   - Ability to choose between upper ("u"), lower ("l"), or both ("b") when calling the function. No need to assign the function to a variable, it self-produces the results.
@@ -51,7 +52,6 @@ Tools to compare a time series (here tree ring chronology) with climate field da
 
 #### *Needs*
   - Error message for uneven seasons (is this necessary now with the ComSummary output?)
-  - What is the extra argument on line 115 for com.l ("5")??? (Fixed see above.)
   - Let's have a report of the years that were chosen and # for compositing
 
 ### 5. ncdfRead.R - imports netcdf file, allows operator to choose variable in the console. Extracts the variable data and determines whether the naming system is "months" or "days and names layers appropriately. Lastly, rotates coordinate system of raster if longitude is not -180 - 180.

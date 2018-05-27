@@ -16,25 +16,25 @@ treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
 ## Also has interactive functionality!!!
 
 # Should be rotating properly now - I hope.
-dat <- ncdfRead(netcdf.file) #not rotatiing!!!
+dat <- ncdfRead(netcdf.file) 
 
 
 # Get a list of the stupid variables to choose from and confirm that the time 
 #origin and units are appropriate......
-nc <- nc_open(netcdf.file)
-
-#select the variable
-print(names(nc[['var']]))
-var.name <- names(nc[['var']])[1]
-
-t <- ncvar_get(nc, "time")
-tunits <- ncatt_get(nc, "time", "units")
-print(tunits)
-tustr <- strsplit(tunits$value, " ")
-
-nc_close(nc)
-
-dat <- rotate(brick(netcdf.file, varname=var.name)) #adjusted for selection above
+# nc <- nc_open(netcdf.file)
+# 
+# #select the variable
+# print(names(nc[['var']]))
+# var.name <- names(nc[['var']])[1]
+# 
+# t <- ncvar_get(nc, "time")
+# tunits <- ncatt_get(nc, "time", "units")
+# print(tunits)
+# tustr <- strsplit(tunits$value, " ")
+# 
+# nc_close(nc)
+# 
+# dat <- rotate(brick(netcdf.file, varname=var.name)) #adjusted for selection above
 #rotate converts lons from 0-360 to -180-180
 
 
@@ -51,9 +51,14 @@ dat <- rotate(brick(netcdf.file, varname=var.name)) #adjusted for selection abov
 
 trDat <- read.table(treering.file, header = TRUE)
 
-## Select start year and end year based on target and tree ring data
-F_yr <- min(as.numeric(substr(names(dat), 2, 5)))
-L_yr <- as.numeric(max(trDat$year))
+## Decide start year and end year based on intersection of target and tree ring data
+yrs_rng <- range(intersect(as.numeric(substr(names(dat), 2, 5)), 
+                           as.numeric(trDat$year)))
+F_yr <- yrs_rng[1]
+L_yr <- yrs_rng[2]
+#OR manually set
+#F_yr <- 1959
+#L_yr <- 1998
 
 #Crop data to it
 trDat <-trDat[which(trDat$year >= F_yr-1 & trDat$year<= L_yr),]
