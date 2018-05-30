@@ -3,12 +3,52 @@
 Tools to compare a time series (here tree ring chronology) with climate field data (netCDF), including correlation, compositing, extracting a time series from gridbox.
 
 ## Current Tasks
+## Current Files
+#### *universal_netCDF_script.R - spatial-field correlation of climate data with (tree ring) proxy indices*
+##### Functioning Script
+  1. Bringing in climate data as a raster
+    - crop to user-defined extent
+    - temporal crop
+    - rename layers for season (three month functioning properly)
+       - apply Schulman shift
+  2. Associate tree ring data with climate data
+    - crop to extent of climate data
+  3. Correlations
+    - apply correlation to data
+    - crop correlations by p-value
+    - display map with cropped correlations
+
+##### Debugging Script
+  1. detrending tree ring
+    - appropriate methods [ discuss additions from AH to understand ]
+  2. detrending climate data
+
+##### Test Script
+  1. Season/Year-end/Shulman code for universal usage
+    - May need to add in flexibility for same year, temporally dislocated proxy months
+    - Seasonal conventions/ideas SC not familiar with
+
+#### *Composite.R - seasonal composite of climate variables *
+##### Functioning Script
+##### Debugging Script
+##### Test Script
+
+## Current Overall Tasks
 
 ### *Needs*
+#### *Needs*
 - Plotting of some anomalies has an asymetric range about 0 resulting in plots with colors at "0" (where there should be white). Not sure if we can remedy this. Ideas?
 
 ## Extract functions from universalNetCDF to:
 ### 1. seasNm.R - Seasonalize gridded climate data (netCDF)
+- Generic version of plotting similar to the code for universal test #1
+
+## 'Package Components'
+functions extracted from code to create generic operations.
+
+### Extract functions from universalNetCDF to:
+
+##### 1. seasNm.R - Seasonalize gridded climate data (netCDF)
   - Four arguments passed to seasNm
     * climDat: climate data
     * SchulmanShift: adjust for seasonal offset in SH. Default is FALSE, calendar year and seasons match
@@ -19,6 +59,7 @@ Tools to compare a time series (here tree ring chronology) with climate field da
     * lg: default no lag 0
 
   #### *Needs*
+###### *Needs*
   - Argument defaults  
     * FUN: mean?
   - create more flexibility for different combinations e.g.:
