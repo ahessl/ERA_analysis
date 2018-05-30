@@ -22,74 +22,54 @@ library(dplR)
 #Name the files for convenience:
 
 netcdf.file <- "../NOAA20thc/hgt500.nc"
-treering.file <- "../../KBP_South/KBPS_cull_gap.rwl_tabs.txt"
+treering.file <- "../../Law_Dome/DSS_Oct-March_average_d18O_2012-1900 CE_20180530.csv"
 
 # Bring in netcdf file via SpatCor
 dat <- ncdfRead(netcdf.file)
 
 
-# Get a list of the variables to choose from and confirm that the time 
-#origin and units are appropriate......
-nc <- nc_open(netcdf.file)
-
-#select the variable
-print(names(nc[['var']]))
-
-var.name <- names(nc[['var']])[1] #MIGHT NEED ADJUSTING
 
 
-t <- ncvar_get(nc, "time")
-tunits <- ncatt_get(nc, "time", "units")
-print(tunits)
-tustr <- strsplit(tunits$value, " ")
+#for some reason, ncdfRead is not able to read in files that index time in months 
+# if (unlist(tustr)[1]=="months") {
+#       mons <- length(t)
+#       org <- as.Date(unlist(tustr)[3])
+#       dates_f <- seq.Date(org, by="month", length.out=mons)
+#       names(dat) <- dates_f
+#     } else {
+#       names(dat) <- names(dat)
+#     }
 
-#extract lon dimension to check its range
-lon <- ncvar_get(nc, "lon")
-mlon <- max(lon)
-print(mlon)
-
-nc_close(nc)
-
-dat <- rotate(brick(netcdf.file, varname= var.name)) #rotate converts lons from 0-360 to -180-180
-
-#for some reason, brick cannot deal with "months since..." ???
-if (unlist(tustr)[1]=="months") {
-      mons <- length(t)
-      org <- as.Date(unlist(tustr)[3])
-      dates_f <- seq.Date(org, by="month", length.out=mons)
-      names(dat) <- dates_f
-    } else {
-      names(dat) <- names(dat)
-    }
-## set spatial extent for area interested in. Longitude min - max then latitude min - max
-#ext <- extent(144, 149, -44, -40) #awap micro extent
-ext <- extent(0, 180, -80, -4)
-#ext <- extent(-180, 180, -80, 0)
+#set spatial extent for area interested in. Longitude min - max then latitude min - max
+ext <- extent(-180, 180, -80, 0) #use the full extent to be sure that rotate is working
 datC <- crop(dat, ext) #Spatial crop using extent
 
 ## Tree ring data
-trDat_tab <- read.table(treering.file, header = TRUE)
+trDat_tab <- read.csv(treering.file, header = TRUE, skip=3)
 
 
 ## Decide start year and end year based on target and tree ring data
-F_yr <- min(as.numeric(substr(names(datC), 2, 5)))
-#F_yr <- 1959
+yrs_rng <- range(intersect(as.numeric(substr(names(datC), 2, 5)), 
+                           as.numeric(trDat_tab$year)))
+#F_yr <- yrs_rng[1]
+L_yr <- yrs_rng[2]
+#OR manually set
+F_yr <- 1959
 #L_yr <- 1998
-L_yr <- as.numeric(max(trDat_tab$year))
 
 #Subset Tree Ring data to F_yr and L_Yr
 trDat_raw <- subset(trDat_tab, year>=F_yr & year<=L_yr )
 
-#Detrend Tree Ring Index Linear or FD
-tr_i <- trDat_raw$ars
+#Detrend Tree Ring Index Linear, FD or Spline
+tr_i <- trDat_raw$d18O_ONDJFM
 ## First Differences Method
 #r <- diff(tr_i), 1))
 # Linear Model Method
 # lm_x <- seq(1:length(tr_i))
 # r <- resid(lm(tr_i ~ lm_x))
 #Difference from spline
-r <- tr_i - ffcsaps(trDat_raw$ars, trDat_raw$year, nyrs=30) #subtract detrended series from original series
-trDat <- as.data.frame(cbind(year=trDat_raw$year, ars=r)) #put dataframe back together
+r <- tr_i - ffcsaps(trDat_raw$d18O_ONDJFM, trDat_raw$year, nyrs=30) #subtract detrended series from original series
+trDat <- as.data.frame(cbind(year=trDat_raw$year, d18O_ONDJFM=r)) #put dataframe back together
 
 
 # Subset rasters based on the F_yr, L_yr
