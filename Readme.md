@@ -22,6 +22,7 @@ Tools to compare a time series (here tree ring chronology) with climate field da
   1. detrending tree ring
     - appropriate methods [ discuss additions from AH to understand ]
   2. detrending climate data
+    - try detrending annual (rather than seasonally) based on SAM?
 
 ##### Test Script
   1. Season/Year-end/Shulman code for universal usage
